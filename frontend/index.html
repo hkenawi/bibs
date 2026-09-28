@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bibs · Local chat</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/chat.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><div><span class="eyebrow">bibs</span><h1>Fair teams. More football.</h1></div>
+      <span class="badge">Local demo</span></header>
+    <p class="intro">The chat foundation is ready to try. Gemini, team balancing, and weather are not connected yet.</p>
+    <section id="conversation" aria-label="Conversation" aria-live="polite">
+      <p class="welcome">Send a message to try the local chat workflow.</p>
+    </section>
+    <p id="status" role="status"></p>
+    <form id="chat-form">
+      <label for="message">Your message</label>
+      <div class="compose"><textarea id="message" required maxlength="10000" rows="2" placeholder="Hello bibs"></textarea>
+        <button id="send" type="submit">Send</button></div>
+    </form>
+    <button id="restart" type="button" hidden>Start a new conversation</button>
+    <footer>Demo responses are deterministic. Sessions are stored in server memory.</footer>
+  </main>
+</body>
+</html>
