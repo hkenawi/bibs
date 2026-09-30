@@ -7,9 +7,10 @@ the agent loop, and the real placeholder tools without calling Google Cloud.
 from unittest.mock import MagicMock
 from json import dumps, loads
 
+import httpx
 import litellm
 from fastapi.testclient import TestClient
-from httpx import Response
+from httpx import Request, Response
 from litellm.types.utils import ModelResponse
 import pytest
 
@@ -19,9 +20,9 @@ from pydantic import JsonValue
 
 
 def test_default_tools_are_advertised_to_model(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A chat question sends five described tool schemas to the provider."""
+    """A chat question sends three described tool schemas to the provider."""
     completion: MagicMock = MagicMock(return_value=ModelResponse(choices=[{
-        "message": {"role": "assistant", "content": "Five tools are available."},
+        "message": {"role": "assistant", "content": "Three tools are available."},
     }]))
     monkeypatch.setattr(litellm, "completion", completion)
     response: Response = TestClient(create_app()).post(
@@ -30,8 +31,8 @@ def test_default_tools_are_advertised_to_model(monkeypatch: pytest.MonkeyPatch) 
     assert response.status_code == 200
     tool: ToolDefinition
     assert {tool["function"]["name"] for tool in completion.call_args.kwargs["tools"]} == {
-        "set_roster", "balance_soccer_teams", "compare_team_options",
-        "rebalance_with_minimal_swaps", "find_nearby_pitches",
+        "set_roster", "balance_soccer_teams",
+        "find_nearby_pitches",
     }
     for tool in completion.call_args.kwargs["tools"]:
         assert tool["type"] == "function"
@@ -51,14 +52,17 @@ def test_explicit_empty_registry_disables_default_tools(monkeypatch: pytest.Monk
 
 
 @pytest.mark.parametrize(("tool_name", "arguments"), [
-    ("compare_team_options", {"home_player_id": "p1", "away_player_id": "p2"}),
-    ("rebalance_with_minimal_swaps", {"priority": "fewest_changes", "removals": ["p1"]}),
     ("find_nearby_pitches", {"neighborhood": "Harlem", "city": "New York"}),
 ])
-def test_placeholder_call_is_recorded_and_returned_to_model(
+def test_pitch_search_call_is_recorded_and_returned_to_model(
     monkeypatch: pytest.MonkeyPatch, tool_name: str, arguments: dict[str, JsonValue],
 ) -> None:
-    """A model call yields a literal not-implemented result in the record and follow-up."""
+    """A pitch search result is recorded and returned to the model."""
+    search_response: Response = Response(
+        200, json={"elements": []},
+        request=Request("POST", "https://overpass-api.de/api/interpreter"),
+    )
+    monkeypatch.setattr(httpx, "post", MagicMock(return_value=search_response))
     completion: MagicMock = MagicMock(side_effect=[
         ModelResponse(choices=[{"message": {"role": "assistant", "content": None,
             "tool_calls": [{"id": "placeholder-call", "type": "function", "function": {
@@ -75,6 +79,7 @@ def test_placeholder_call_is_recorded_and_returned_to_model(
     assert record["name"] == tool_name
     assert record["args"] == arguments
     result: dict[str, JsonValue] = response.json()["tool_calls"][0]["result"]
-    assert result == {"ok": False, "error": "Not implemented"}
+    assert result["ok"] is True
+    assert result["pitches"] == []
     assert loads(completion.call_args.kwargs["messages"][-1]["content"]) == result
     assert completion.call_args.kwargs["messages"][-1]["tool_call_id"] == "placeholder-call"

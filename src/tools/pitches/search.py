@@ -1,11 +1,14 @@
-"""Declare the find_nearby_pitches tool for model discovery.
+"""Find soccer pitches within named OpenStreetMap areas.
 
-This module owns the neighborhood search schema and a placeholder function.
-It makes no external requests and does not access browser location."""
+This tool queries the public Overpass API and returns up to three
+mapped pitches. It does not rank distances or mutate session state.
+"""
 
-from typing import TYPE_CHECKING
+from json import dumps
+from typing import TYPE_CHECKING, cast
 
-from pydantic import JsonValue
+import httpx
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
 
 from src.application.models import ToolDefinition
 
@@ -13,29 +16,34 @@ if TYPE_CHECKING:
     from src.application.session_db import ConversationSession
 
 
+class PitchSearchInput(BaseModel):
+    """Validate the named areas supplied through chat."""
+
+    model_config: ConfigDict = ConfigDict(
+        strict=True,
+        extra="forbid",
+        str_strip_whitespace=True,
+    )
+
+    neighborhood: str = Field(min_length=1)
+    city: str = Field(min_length=1)
+
+
 definition: ToolDefinition = {
     "type": "function",
     "function": {
         "name": "find_nearby_pitches",
-        "description": "Find soccer pitches near a neighborhood. Ask the user for their neighborhood if missing, and their city if needed to disambiguate. Do not claim booking availability.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "neighborhood": {
-                    "type": "string",
-                    "minLength": 1,
-                    "description": "Neighborhood supplied by the user."
-                },
-                "city": {
-                    "type": "string",
-                    "minLength": 1,
-                    "description": "City containing the neighborhood, when needed to disambiguate."
-                }
-            },
-            "required": ["neighborhood"],
-            "additionalProperties": False
-        }
-    }
+        "description": (
+            "Find up to three soccer pitches in a named neighborhood "
+            "and city. Ask for missing location details. Results are "
+            "not ranked by distance. Show the returned map links and "
+            "credit OpenStreetMap contributors."
+        ),
+        "parameters": cast(
+            dict[str, JsonValue],
+            PitchSearchInput.model_json_schema(),
+        ),
+    },
 }
 
 
@@ -43,9 +51,81 @@ def find_nearby_pitches(
     arguments: dict[str, JsonValue],
     session: "ConversationSession",
 ) -> dict[str, JsonValue]:
-    """Return a placeholder result without searching for pitches.
+    """Return up to three mapped soccer pitches without changing the session."""
 
-    Example: {"neighborhood": "Harlem"} -> {"ok": False, "error": "Not implemented"}.
+    location: PitchSearchInput
+    try:
+        location = PitchSearchInput.model_validate(arguments)
+    except ValidationError as error:
+        return {"ok": False, "error": str(error)}
+
+    query: str = f"""
+        [out:json][timeout:20];
+        area["boundary"="administrative"]
+            ["name"={dumps(location.city)}]->.city;
+        area["name"={dumps(location.neighborhood)}]->.neighborhood;
+        nwr(area.city)(area.neighborhood)
+            ["leisure"="pitch"]["sport"="soccer"];
+        out tags 3;
     """
-    # TODO: Search for pitches near the supplied neighborhood.
-    return {"ok": False, "error": "Not implemented"}
+
+    response: httpx.Response
+    payload: object
+    try:
+        response = httpx.post(
+            "https://overpass-api.de/api/interpreter",
+            data={"data": query},
+            headers={"User-Agent": "bibs/0.1"},
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except (httpx.HTTPError, ValueError):
+        return {
+            "ok": False,
+            "error": "Pitch search is unavailable right now. Try again later.",
+        }
+
+    if not isinstance(payload, dict) or payload.get("remark"):
+        return {"ok": False, "error": "Pitch search returned an invalid response."}
+
+    elements: object = payload.get("elements")
+    if not isinstance(elements, list):
+        return {"ok": False, "error": "Pitch search returned no results list."}
+
+    pitches: list[JsonValue] = []
+    element: object
+    for element in elements:
+        if not isinstance(element, dict):
+            continue
+
+        element_type: object = element.get("type")
+        element_id: object = element.get("id")
+        tags: object = element.get("tags", {})
+
+        if (
+            element_type not in ("node", "way", "relation")
+            or type(element_id) is not int
+            or not isinstance(tags, dict)
+        ):
+            continue
+
+        name: object = tags.get("name")
+        pitches.append({
+            "name": name if isinstance(name, str) and name else "Unnamed soccer pitch",
+            "map_url": f"https://www.openstreetmap.org/{element_type}/{element_id}",
+        })
+
+        if len(pitches) == 3:
+            break
+
+    return {
+        "ok": True,
+        "pitches": pitches,
+        "message": (
+            "Found mapped soccer pitches."
+            if pitches
+            else "No matching pitches found. Try another neighborhood or district."
+        ),
+        "attribution": "© OpenStreetMap contributors",
+    }

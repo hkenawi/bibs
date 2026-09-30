@@ -11,14 +11,14 @@ from pydantic import JsonValue
 from src.application.models import ToolDefinition
 from src.application.session_db import ConversationSession
 from src.tools.pitches import search
-from src.tools.teams import balance, compare, rebalance, roster
+from src.tools.teams import balance, roster
 
 
+# TODO: Consider registering the rebalance tool once its behavior is implemented.
+# TODO: Consider registering the compare tool once its behavior is implemented.
 TOOLS: tuple[ToolDefinition, ...] = (
     roster.definition,
     balance.definition,
-    compare.definition,
-    rebalance.definition,
     search.definition,
 )
 
@@ -31,10 +31,6 @@ HANDLERS: dict[
 ] = {
     roster.definition["function"]["name"]: roster.set_roster,
     balance.definition["function"]["name"]: balance.balance_soccer_teams,
-    compare.definition["function"]["name"]: compare.compare_team_options,
-    rebalance.definition["function"]["name"]: (
-        rebalance.rebalance_with_minimal_swaps
-    ),
     search.definition["function"]["name"]: search.find_nearby_pitches,
 }
 

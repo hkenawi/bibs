@@ -6,13 +6,14 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi[standard]>=0.141.1",
+    "httpx>=0.27",
     "litellm[google]>=1.103.1",
     "pydantic>=2.13",
     "uvicorn>=0.30",
 ]
 
 [dependency-groups]
-dev = ["pytest>=8", "httpx>=0.27"]
+dev = ["pytest>=8"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
