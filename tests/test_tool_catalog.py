@@ -51,7 +51,6 @@ def test_explicit_empty_registry_disables_default_tools(monkeypatch: pytest.Monk
 
 
 @pytest.mark.parametrize(("tool_name", "arguments"), [
-    ("balance_soccer_teams", {}),
     ("compare_team_options", {"home_player_id": "p1", "away_player_id": "p2"}),
     ("rebalance_with_minimal_swaps", {"priority": "fewest_changes", "removals": ["p1"]}),
     ("find_nearby_pitches", {"neighborhood": "Harlem", "city": "New York"}),

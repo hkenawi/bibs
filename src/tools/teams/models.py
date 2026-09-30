@@ -37,3 +37,14 @@ class RosterInput(BaseModel):
     )
 
     players: list[PlayerInput]
+
+
+class BalanceInput(BaseModel):
+    """Validate optional settings for balancing the saved roster."""
+
+    model_config: ConfigDict = ConfigDict(
+        strict=True,
+        extra="forbid",
+    )
+
+    dedicated_goalkeepers: bool | None = None

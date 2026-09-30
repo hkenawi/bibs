@@ -14,3 +14,6 @@ from src.tools.teams.models import RosterPlayer
 class ConversationSession:
     messages: tuple[ChatMessage, ...] = ()
     roster: tuple[RosterPlayer, ...] = ()
+    home: tuple[RosterPlayer, ...] = ()
+    away: tuple[RosterPlayer, ...] = ()
+    dedicated_goalkeepers: bool = False

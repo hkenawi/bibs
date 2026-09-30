@@ -77,6 +77,8 @@ def set_roster(
         )
 
     session.roster = tuple(saved_players)
+    session.home = ()
+    session.away = ()
 
     return {
         "ok": True,
