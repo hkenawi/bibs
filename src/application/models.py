@@ -1,21 +1,31 @@
 """Define conversation data and model/tool interfaces for bibs.
 
-The application and provider adapters share these types so the agent loop
-can operate without depending on a particular model SDK."""
+The application and provider adapters share message dataclasses. Tool schemas
+are typed dictionaries in the format accepted directly by LiteLLM, without
+importing provider SDK types into the application."""
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, TypedDict
 
 from pydantic import JsonValue
 
 from src.configuration import MessageRole
+from src.configuration.constants import ProviderToolType
 
 
-@dataclass(frozen=True)
-class ToolDefinition:
+class ToolFunctionDefinition(TypedDict):
+    """Describe a callable tool and the JSON schema of its arguments."""
+
     name: str
     description: str
     parameters: dict[str, JsonValue]
+
+
+class ToolDefinition(TypedDict):
+    """Declare a tool in LiteLLM's request format; no conversion is needed."""
+
+    type: ProviderToolType
+    function: ToolFunctionDefinition
 
 
 @dataclass(frozen=True)
@@ -47,5 +57,9 @@ class ChatTool(Protocol):
         self,
         arguments: dict[str, JsonValue],
     ) -> dict[str, JsonValue]:
-        """Validate the supplied arguments and return the tool result."""
+        """Validate arguments and execute this tool, returning a JSON object.
+
+        Example for an echo implementation: {"value": 7} -> {"value": 7}.
+        Each implementation defines its own argument schema and result fields.
+        """
         ...

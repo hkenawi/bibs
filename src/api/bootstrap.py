@@ -11,15 +11,22 @@ from fastapi.staticfiles import StaticFiles
 from src.api.routes import create_router
 from src.application.models import ChatTool
 from src.application.session_db import ConversationSession
+from src.configuration import constants
 
 
 def create_app(
     tools: tuple[ChatTool, ...] = (),
 ) -> FastAPI:
+    """Build an app with isolated sessions and tools indexed by schema name.
+
+    Example: create_app(tools=()) -> a FastAPI app serving /chat and /health
+    with an empty tool registry. Construction does not call the model."""
+    
     app: FastAPI = FastAPI(title="bibs")
     sessions: dict[str, ConversationSession] = {}
+    tool: ChatTool
     tool_registry: dict[str, ChatTool] = {
-        tool.definition.name: tool for tool in tools
+        tool.definition["function"]["name"]: tool for tool in tools
     }
     frontend: Path = Path(__file__).resolve().parents[2] / "frontend"
 
@@ -28,7 +35,7 @@ def create_app(
             sessions=sessions,
             tools=tool_registry,
             frontend=frontend,
-            model_mode="demo",
+            model_mode=constants.gemini.MODE.value,
         )
     )
     app.mount("/static", StaticFiles(directory=frontend), name="static")

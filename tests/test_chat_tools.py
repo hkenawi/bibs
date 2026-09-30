@@ -17,11 +17,14 @@ from src.configuration import constants
 
 
 class EchoTool:
-    definition: ToolDefinition = ToolDefinition(
-        name="echo", description="Return a supplied value for a contract test.",
-        parameters={"type": "object", "properties": {"value": {"type": "integer"}},
-                    "required": ["value"], "additionalProperties": False},
-    )
+    definition: ToolDefinition = {
+        "type": constants.tool_types.FUNCTION,
+        "function": {
+            "name": "echo", "description": "Return a supplied value for a contract test.",
+            "parameters": {"type": "object", "properties": {"value": {"type": "integer"}},
+                           "required": ["value"], "additionalProperties": False},
+        },
+    }
 
     def execute_tool(self, arguments: dict[str, JsonValue]) -> dict[str, JsonValue]:
         return {"ok": True, "data": arguments}
@@ -34,7 +37,7 @@ def generate_tool_response(
         assert messages[-2].tool_call_id == "first"
         assert messages[-3].tool_calls[0].call_id == "first"
         return ChatMessage(constants.roles.ASSISTANT, "Both results received.")
-    assert tools[0].name == "echo"
+    assert tools[0]["function"]["name"] == "echo"
     return ChatMessage(constants.roles.ASSISTANT, "", tool_calls=(
         ToolRequest("first", "echo", {"value": 7}),
         ToolRequest("second", "echo", {"value": 9}),

@@ -19,10 +19,18 @@ class ErrorCode(StrEnum):
     SESSION_EXPIRED = "SESSION_EXPIRED"
 
 
+class GeminiSetting(StrEnum):
+    MODEL = "vertex_ai/gemini-3.5-flash-lite"
+    LOCATION = "global"
+    MODE = "gemini"
+
+
 @dataclass(frozen=True)
 class Constants:
     roles: type[MessageRole] = MessageRole
     errors: type[ErrorCode] = ErrorCode
+    gemini: type[GeminiSetting] = GeminiSetting
+    tool_types: str = Literal["function"]
     max_tool_rounds: int = 4
 
 

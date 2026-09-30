@@ -11,20 +11,26 @@ Requires Python 3.12+ and `uv`.
 
 ```sh
 uv sync
+gcloud config set project YOUR_PROJECT_ID
+gcloud auth application-default login
 uv run uvicorn app:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Open http://127.0.0.1:8000 for the demo chat, or `/docs` for the API explorer.
-The default adapter produces labeled, deterministic demo responses and makes no
-external requests. No API key is required. Gemini integration is deferred.
+Open http://127.0.0.1:8000 for Gemini chat, or `/docs` for the API explorer.
+The adapter calls `vertex_ai/gemini-3.5-flash-lite` in the `global` location through
+LiteLLM using Google Application Default Credentials. Your Google Cloud project
+needs billing, Vertex AI API access, and permission to use the requested model.
+No `.env` file or API key is needed. Live model availability and credentials must
+be verified in your own project; automated tests mock the provider boundary.
 
 ```sh
 uv run pytest -q
+uv run pytest tests/unit -q
 ```
 
 The tool round limit is set in `src/configuration/constants.py` as
-`constants.max_tool_rounds`. Environment files are not loaded automatically. Keep credentials in uncommitted
-local configuration when a real provider is added.
+`constants.max_tool_rounds`. The model and location are exposed through
+`constants.gemini`. Environment files are not loaded automatically.
 
 ## Architecture
 
@@ -33,15 +39,22 @@ local configuration when a real provider is added.
 - `src/application/service.py`: simple bounded agent loop.
 - `src/application/models.py`: shared messages, tool records, and model/tool interfaces.
 - `src/application/session_db.py`: conversation dataclass and a dictionary of sessions.
-- `src/integrations/model.py`: standalone response function; future Gemini connection.
+- `src/integrations/model.py`: Gemini adapter for messages and tool calls.
 - `src/configuration/`: shared constants and protocol enums.
 - `frontend/`: basic browser chat, loading/errors, and expandable tool records.
+- `tests/unit/`: adapter unit tests with mocked LiteLLM calls.
+- `tests/test_chat_*.py`: HTTP and agent-loop integration tests.
 
 `create_app(tools=...)` accepts the available tools. The agent loop imports
 `generate_response(messages, tools)` directly from `src/integrations/model.py`.
-That function returns an assistant `ChatMessage`; tests temporarily replace it. Messages preserve
+That function returns an assistant `ChatMessage`. Messages preserve
 assistant tool requests and matching tool-result IDs. Tool adapters expose typed
 definitions and must validate arguments before performing their operations.
+Tool definitions are `ToolDefinition` typed dictionaries, already in LiteLLM's
+format: `{"type": "function", "function": {"name": ..., "description": ...,
+"parameters": ...}}`. The adapter passes these directly to the model; each tool's
+`execute_tool()` method performs the actual work. Conversation messages remain
+application-owned `ChatMessage` objects with a small conversion at the API boundary.
 The default application registers no tools. Contract tests use a test-only tool.
 
 `POST /chat` accepts `message` and an optional `session_id`. Successful responses
@@ -55,7 +68,7 @@ to a dedicated phase. The existing session-not-found response remains in place.
 
 This is the Phase 1 architectural foundation. The course starter ZIP has not been
 inspected, so compatibility with its implementation is unverified. A real Gemini
-request and starter-derived workflow remain deferred Phase 1 completion gates.
+request and starter-derived workflow remain unverified Phase 1 completion gates.
 
 Sessions disappear on restart. Use one worker. Concurrent updates to the same
 session are not coordinated yet and can overwrite history. This initial browser keeps its ID

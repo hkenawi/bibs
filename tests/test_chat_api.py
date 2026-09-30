@@ -1,8 +1,12 @@
 """Verify the browser-facing chat contract through the real HTTP application.
 
-These integration tests exercise public routes without network model requests;
-the default application uses the explicitly identified local demo adapter."""
+These integration tests exercise public routes without network model requests.
+LiteLLM is mocked when exercising the real Gemini adapter through HTTP."""
 
+from unittest.mock import MagicMock
+
+import litellm
+from litellm.types.utils import ModelResponse
 from fastapi.testclient import TestClient
 from httpx import Response
 import pytest
@@ -13,13 +17,18 @@ from src.application.models import ChatMessage, ToolDefinition
 from src.configuration import constants
 
 
-def test_chat_returns_required_fields_without_tool_execution() -> None:
+def test_chat_returns_required_fields_without_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
+    completion: MagicMock = MagicMock(return_value=ModelResponse(choices=[{
+        "message": {"role": "assistant", "content": "Hello from the model."},
+        "finish_reason": "stop",
+    }]))
+    monkeypatch.setattr(litellm, "completion", completion)
     client: TestClient = TestClient(create_app())
     response: Response = client.post("/chat", json={"message": "Hello"})
     assert response.status_code == 200
     assert set(response.json()) == {"response", "session_id", "tool_calls"}
     assert response.json()["session_id"]
-    assert "demo" in response.json()["response"].lower()
+    assert response.json()["response"] == "Hello from the model."
     assert response.json()["tool_calls"] == []
 
 
@@ -52,10 +61,10 @@ def test_unknown_session_is_explicitly_rejected() -> None:
 
 def test_local_browser_entry_and_health_are_available() -> None:
     client: TestClient = TestClient(create_app())
-    assert client.get("/health").json() == {"status": "ok", "model_mode": "demo"}
+    assert client.get("/health").json() == {"status": "ok", "model_mode": "gemini"}
     page: Response = client.get("/")
     assert page.status_code == 200
-    assert "Local demo" in page.text
+    assert "Gemini chat" in page.text
     assert client.get("/static/chat.js").status_code == 200
 
 
