@@ -22,7 +22,7 @@ def run_agent(
     max_tool_rounds: int = constants.max_tool_rounds,
 ) -> tuple[str, list[ToolRecord]]:
     definitions: tuple[ToolDefinition, ...] = tuple(
-        tool.definition for tool in tools.values()
+        tool["definition"] for tool in tools.values()
     )
     records: list[ToolRecord] = []
     rounds: int = 0
@@ -45,7 +45,7 @@ def run_agent(
             record: ToolRecord = ToolRecord(
                 name=call.name,
                 args=call.arguments,
-                result=tools[call.name].execute_tool(call.arguments),
+                result=tools[call.name]["handler"](call.arguments),
             )
             records.append(record)
 

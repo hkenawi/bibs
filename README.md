@@ -3,7 +3,7 @@
 **Fair teams. More football.**
 
 bibs will help organizers split rosters of 10 or more soccer players into fair
-teams, preview swaps, revise teams after roster changes, and check match weather.
+teams, preview swaps, revise teams after roster changes, and find pitches near a neighborhood.
 
 ## Local foundation
 
@@ -40,6 +40,7 @@ The tool round limit is set in `src/configuration/constants.py` as
 - `src/application/models.py`: shared messages, tool records, and model/tool interfaces.
 - `src/application/session_db.py`: conversation dataclass and a dictionary of sessions.
 - `src/integrations/model.py`: Gemini adapter for messages and tool calls.
+- `src/tools/`: tool definitions and placeholder execution methods, grouped into teams and pitches.
 - `src/configuration/`: shared constants and protocol enums.
 - `frontend/`: basic browser chat, loading/errors, and expandable tool records.
 - `tests/unit/`: adapter unit tests with mocked LiteLLM calls.
@@ -52,10 +53,26 @@ assistant tool requests and matching tool-result IDs. Tool adapters expose typed
 definitions and must validate arguments before performing their operations.
 Tool definitions are `ToolDefinition` typed dictionaries, already in LiteLLM's
 format: `{"type": "function", "function": {"name": ..., "description": ...,
-"parameters": ...}}`. The adapter passes these directly to the model; each tool's
-`execute_tool()` method performs the actual work. Conversation messages remain
+"parameters": ...}}`. The adapter passes these directly to the model; each tool module's
+named function (such as `balance_soccer_teams()`) performs the actual work.
+`src/tools/__init__.py` pairs each definition with its function using a plain
+dictionary containing `definition` and `handler`. Conversation messages remain
 application-owned `ChatMessage` objects with a small conversion at the API boundary.
-The default application registers no tools. Contract tests use a test-only tool.
+The default application registers four placeholder tools:
+
+| Tool | Planned purpose |
+|---|---|
+| `balance_soccer_teams` | Create fair teams from the session roster. |
+| `compare_team_options` | Preview a cross-team player swap. |
+| `rebalance_with_minimal_swaps` | Revise teams after roster changes. |
+| `find_nearby_pitches` | Find soccer pitches near a user-provided neighborhood; ask for the city when needed. |
+
+Ask **“What tools do you have access to? Describe their inputs and whether they
+are implemented.”** in the local chat. The definitions are sent to Gemini on each
+turn. Executing any placeholder returns `{"ok": false, "error": "Not implemented"}`; no
+calculation, session mutation, or pitch search occurs. Input schemas describe
+the intended contract; argument validation and business logic remain to be built.
+Use `create_app(tools=())` to disable all tools or pass a tuple to replace the defaults.
 
 `POST /chat` accepts `message` and an optional `session_id`. Successful responses
 contain `response`, `session_id`, and `tool_calls`, including an empty array when
@@ -73,6 +90,6 @@ request and starter-derived workflow remain unverified Phase 1 completion gates.
 Sessions disappear on restart. Use one worker. Concurrent updates to the same
 session are not coordinated yet and can overwrite history. This initial browser keeps its ID
 only while the page remains open; refresh restoration, clear/reset endpoints,
-roster management, soccer tools, weather, and the final interface are later phases.
+roster management, soccer tools, pitch search, and the final interface are later phases.
 The round limit bounds model/tool cycles; provider timeouts, retries, raw tool JSON
 validation, and production hardening belong to the dedicated error-handling phase.

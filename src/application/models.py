@@ -5,12 +5,12 @@ are typed dictionaries in the format accepted directly by LiteLLM, without
 importing provider SDK types into the application."""
 
 from dataclasses import dataclass
-from typing import Protocol, TypedDict
+from collections.abc import Callable
+from typing import Literal, TypedDict
 
 from pydantic import JsonValue
 
 from src.configuration import MessageRole
-from src.configuration.constants import ProviderToolType
 
 
 class ToolFunctionDefinition(TypedDict):
@@ -24,7 +24,7 @@ class ToolFunctionDefinition(TypedDict):
 class ToolDefinition(TypedDict):
     """Declare a tool in LiteLLM's request format; no conversion is needed."""
 
-    type: ProviderToolType
+    type: Literal["function"]
     function: ToolFunctionDefinition
 
 
@@ -50,16 +50,8 @@ class ChatMessage:
     tool_call_id: str | None = None
 
 
-class ChatTool(Protocol):
+class ChatTool(TypedDict):
+    """Pair a model-facing definition with the Python function to call."""
+
     definition: ToolDefinition
-
-    def execute_tool(
-        self,
-        arguments: dict[str, JsonValue],
-    ) -> dict[str, JsonValue]:
-        """Validate arguments and execute this tool, returning a JSON object.
-
-        Example for an echo implementation: {"value": 7} -> {"value": 7}.
-        Each implementation defines its own argument schema and result fields.
-        """
-        ...
+    handler: Callable[[dict[str, JsonValue]], dict[str, JsonValue]]

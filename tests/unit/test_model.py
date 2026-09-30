@@ -51,7 +51,7 @@ def test_sends_configured_model_and_ordered_history(completion_mock: MagicMock) 
 
 def test_sends_available_tool_definitions(completion_mock: MagicMock) -> None:
     definition: ToolDefinition = {
-        "type": constants.tool_types.FUNCTION,
+        "type": "function",
         "function": {
             "name": "weather", "description": "Get weather",
             "parameters": {"type": "object"},

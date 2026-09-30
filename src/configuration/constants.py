@@ -30,7 +30,6 @@ class Constants:
     roles: type[MessageRole] = MessageRole
     errors: type[ErrorCode] = ErrorCode
     gemini: type[GeminiSetting] = GeminiSetting
-    tool_types: str = Literal["function"]
     max_tool_rounds: int = 4
 
 

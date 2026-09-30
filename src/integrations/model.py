@@ -58,7 +58,7 @@ def serialize_message(message: ChatMessage) -> dict[str, JsonValue]:
         call: ToolRequest
         payload["tool_calls"] = [dict(
             id=call.call_id,
-            type=constants.tool_types.FUNCTION.value,
+            type="function",
             function=dict(name=call.name, arguments=dumps(call.arguments)),
         ) for call in message.tool_calls]
     if message.tool_call_id is not None:

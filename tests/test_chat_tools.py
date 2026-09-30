@@ -11,23 +11,26 @@ import pytest
 from src.api import create_app
 from src.application import service
 from src.application.models import (
-    ChatMessage, ToolDefinition, ToolRequest,
+    ChatMessage, ChatTool, ToolDefinition, ToolRequest,
 )
 from src.configuration import constants
 
 
-class EchoTool:
-    definition: ToolDefinition = {
-        "type": constants.tool_types.FUNCTION,
-        "function": {
-            "name": "echo", "description": "Return a supplied value for a contract test.",
-            "parameters": {"type": "object", "properties": {"value": {"type": "integer"}},
-                           "required": ["value"], "additionalProperties": False},
-        },
-    }
+echo_definition: ToolDefinition = {
+    "type": "function",
+    "function": {
+        "name": "echo", "description": "Return a supplied value for a contract test.",
+        "parameters": {"type": "object", "properties": {"value": {"type": "integer"}},
+                       "required": ["value"], "additionalProperties": False},
+    },
+}
 
-    def execute_tool(self, arguments: dict[str, JsonValue]) -> dict[str, JsonValue]:
-        return {"ok": True, "data": arguments}
+def echo_value(arguments: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """Echo arguments: {"value": 7} -> {"ok": True, "data": {"value": 7}}."""
+    return {"ok": True, "data": arguments}
+
+
+echo_tool: ChatTool = {"definition": echo_definition, "handler": echo_value}
 
 
 def generate_tool_response(
@@ -45,7 +48,7 @@ def generate_tool_response(
 
 def test_executed_tools_are_recorded_in_order_and_returned_to_model(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(service, "generate_response", generate_tool_response)
-    client: TestClient = TestClient(create_app(tools=(EchoTool(),)))
+    client: TestClient = TestClient(create_app(tools=(echo_tool,)))
     response: Response = client.post("/chat", json={"message": "Run the test tools"})
     assert response.status_code == 200
     assert response.json()["response"] == "Both results received."
@@ -75,7 +78,7 @@ def generate_repeating_tool_response(
 def test_loop_stops_before_executing_tools_beyond_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(service, "generate_response", generate_repeating_tool_response)
     client: TestClient = TestClient(create_app(
-        tools=(EchoTool(),),
+        tools=(echo_tool,),
     ))
     response: Response = client.post("/chat", json={"message": "Repeat"})
     assert "limit" in response.json()["response"]
@@ -94,15 +97,18 @@ def test_provider_exception_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
         client.post("/chat", json={"message": "Hello"})
 
 
-class FailingTool(EchoTool):
-    def execute_tool(self, arguments: dict[str, JsonValue]) -> dict[str, JsonValue]:
-        raise ValueError("Invalid test input")
+def reject_arguments(arguments: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """Reject input: any argument dictionary -> ValueError."""
+    raise ValueError("Invalid test input")
+
+
+failing_tool: ChatTool = {"definition": echo_definition, "handler": reject_arguments}
 
 
 def test_tool_exception_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(service, "generate_response", generate_repeating_tool_response)
     client: TestClient = TestClient(create_app(
-        tools=(FailingTool(),),
+        tools=(failing_tool,),
     ))
     with pytest.raises(ValueError, match="Invalid test input"):
         client.post("/chat", json={"message": "Run the tool"})
