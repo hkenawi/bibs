@@ -13,7 +13,7 @@ from litellm.types.utils import ChatCompletionMessageToolCall, Choices, ModelRes
 from pydantic import JsonValue, TypeAdapter
 
 from src.application.models import ChatMessage, ToolDefinition, ToolRequest
-from src.configuration import constants
+from src.configuration.constants import constants
 
 
 def generate_response(

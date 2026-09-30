@@ -10,7 +10,7 @@ from typing import Literal, TypedDict
 
 from pydantic import JsonValue
 
-from src.configuration import MessageRole
+from src.configuration.constants import MessageRole
 
 
 class ToolFunctionDefinition(TypedDict):

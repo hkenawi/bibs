@@ -11,7 +11,7 @@ from litellm.types.utils import ModelResponse
 import pytest
 
 from src.application.models import ChatMessage, ToolDefinition, ToolRequest
-from src.configuration import constants
+from src.configuration.constants import constants
 from src.integrations.model import generate_response
 
 

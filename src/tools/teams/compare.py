@@ -4,9 +4,14 @@ This module owns its API schema and a placeholder function. It does not
 perform calculations, change session state, or contact external services.
 """
 
+from typing import TYPE_CHECKING
+
 from pydantic import JsonValue
 
 from src.application.models import ToolDefinition
+
+if TYPE_CHECKING:
+    from src.application.session_db import ConversationSession
 
 
 definition: ToolDefinition = {
@@ -38,7 +43,10 @@ definition: ToolDefinition = {
 }
 
 
-def compare_team_options(arguments: dict[str, JsonValue]) -> dict[str, JsonValue]:
+def compare_team_options(
+    arguments: dict[str, JsonValue],
+    session: "ConversationSession",
+) -> dict[str, JsonValue]:
     """Return a placeholder result without performing any work.
 
     Example: {} -> {"ok": False, "error": "Not implemented"}.

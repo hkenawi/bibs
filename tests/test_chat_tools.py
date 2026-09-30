@@ -8,12 +8,12 @@ from httpx import Response
 from pydantic import JsonValue
 import pytest
 
-from src.api import create_app
+from src.api.bootstrap import create_app
 from src.application import service
 from src.application.models import (
     ChatMessage, ChatTool, ToolDefinition, ToolRequest,
 )
-from src.configuration import constants
+from src.configuration.constants import constants
 
 
 echo_definition: ToolDefinition = {

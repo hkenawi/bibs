@@ -1,13 +1,16 @@
-"""Define in-memory conversation storage for bibs.
+"""Define in-memory conversation and roster storage for bibs.
 
-Each application owns a dictionary of sessions. Conversations are lost when
-the server restarts. Concurrent updates are not coordinated at this stage."""
+Each application owns its session dictionary. Messages and players are
+lost when the server restarts. Concurrent updates are not coordinated.
+"""
 
 from dataclasses import dataclass
 
 from src.application.models import ChatMessage
+from src.tools.teams.models import RosterPlayer
 
 
 @dataclass
 class ConversationSession:
     messages: tuple[ChatMessage, ...] = ()
+    roster: tuple[RosterPlayer, ...] = ()

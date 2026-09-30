@@ -9,15 +9,15 @@ from pathlib import Path
 from uuid import uuid4
 
 from src.api.schemas import ChatRequest, ChatResponse
-from src.application import run_agent
+from src.application.service import run_agent
 from src.application.models import ChatMessage, ChatTool, ToolRecord
 from src.application.session_db import ConversationSession
-from src.configuration import constants
+from src.configuration.constants import constants
 
 
 def create_router(
     sessions: dict[str, ConversationSession],
-    tools: dict[str, ChatTool],
+    tools: dict[str, ChatTool] | None,
     frontend: Path,
     model_mode: str,
 ) -> APIRouter:
@@ -62,6 +62,7 @@ def create_router(
         tool_calls: list[ToolRecord]
         response, tool_calls = run_agent(
             messages=messages,
+            session=session,
             tools=tools,
             max_tool_rounds=constants.max_tool_rounds,
         )

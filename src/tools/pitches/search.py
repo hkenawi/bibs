@@ -3,9 +3,14 @@
 This module owns the neighborhood search schema and a placeholder function.
 It makes no external requests and does not access browser location."""
 
+from typing import TYPE_CHECKING
+
 from pydantic import JsonValue
 
 from src.application.models import ToolDefinition
+
+if TYPE_CHECKING:
+    from src.application.session_db import ConversationSession
 
 
 definition: ToolDefinition = {
@@ -34,7 +39,10 @@ definition: ToolDefinition = {
 }
 
 
-def find_nearby_pitches(arguments: dict[str, JsonValue]) -> dict[str, JsonValue]:
+def find_nearby_pitches(
+    arguments: dict[str, JsonValue],
+    session: "ConversationSession",
+) -> dict[str, JsonValue]:
     """Return a placeholder result without searching for pitches.
 
     Example: {"neighborhood": "Harlem"} -> {"ok": False, "error": "Not implemented"}.

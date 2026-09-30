@@ -5,6 +5,6 @@ only constructs process-local application state, without network model calls."""
 
 from fastapi import FastAPI
 
-from src.api import create_app
+from src.api.bootstrap import create_app
 
 app: FastAPI = create_app()

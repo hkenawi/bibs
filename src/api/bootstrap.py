@@ -11,26 +11,29 @@ from fastapi.staticfiles import StaticFiles
 from src.api.routes import create_router
 from src.application.models import ChatTool
 from src.application.session_db import ConversationSession
-from src.configuration import constants
-from src.tools import create_default_tools
+from src.configuration.constants import constants
 
 
 def create_app(
     tools: tuple[ChatTool, ...] | None = None,
 ) -> FastAPI:
-    """Build an app with isolated sessions and tools indexed by schema name.
+    """Build an app with isolated sessions and optional custom tools.
 
-    Example: create_app(tools=()) -> a FastAPI app serving /chat and /health
-    with an empty tool registry. Omit tools to register the four placeholders.
-    Construction does not call the model."""
-    
+    Omit tools to use the standard registry. Pass an empty tuple to
+    disable tools. Construction does not call the model.
+    """
+
     app: FastAPI = FastAPI(title="bibs")
     sessions: dict[str, ConversationSession] = {}
-    registered_tools: tuple[ChatTool, ...] = create_default_tools() if tools is None else tools
     tool: ChatTool
-    tool_registry: dict[str, ChatTool] = {
-        tool["definition"]["function"]["name"]: tool for tool in registered_tools
-    }
+    tool_registry: dict[str, ChatTool] | None = (
+        None
+        if tools is None
+        else {
+            tool["definition"]["function"]["name"]: tool
+            for tool in tools
+        }
+    )
     frontend: Path = Path(__file__).resolve().parents[2] / "frontend"
 
     app.include_router(

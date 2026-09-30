@@ -13,15 +13,15 @@ from httpx import Response
 from litellm.types.utils import ModelResponse
 import pytest
 
-from src.api import create_app
+from src.api.bootstrap import create_app
 from src.application.models import ToolDefinition
 from pydantic import JsonValue
 
 
 def test_default_tools_are_advertised_to_model(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A chat question sends four described tool schemas to the provider."""
+    """A chat question sends five described tool schemas to the provider."""
     completion: MagicMock = MagicMock(return_value=ModelResponse(choices=[{
-        "message": {"role": "assistant", "content": "Four placeholder tools are available."},
+        "message": {"role": "assistant", "content": "Five tools are available."},
     }]))
     monkeypatch.setattr(litellm, "completion", completion)
     response: Response = TestClient(create_app()).post(
@@ -30,7 +30,7 @@ def test_default_tools_are_advertised_to_model(monkeypatch: pytest.MonkeyPatch) 
     assert response.status_code == 200
     tool: ToolDefinition
     assert {tool["function"]["name"] for tool in completion.call_args.kwargs["tools"]} == {
-        "balance_soccer_teams", "compare_team_options",
+        "set_roster", "balance_soccer_teams", "compare_team_options",
         "rebalance_with_minimal_swaps", "find_nearby_pitches",
     }
     for tool in completion.call_args.kwargs["tools"]:

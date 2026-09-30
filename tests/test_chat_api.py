@@ -11,10 +11,10 @@ from fastapi.testclient import TestClient
 from httpx import Response
 import pytest
 
-from src.api import create_app
+from src.api.bootstrap import create_app
 from src.application import service
 from src.application.models import ChatMessage, ToolDefinition
-from src.configuration import constants
+from src.configuration.constants import constants
 
 
 def test_chat_returns_required_fields_without_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
