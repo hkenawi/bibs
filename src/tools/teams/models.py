@@ -5,6 +5,7 @@ They do not access the model provider or mutate session state.
 """
 
 from pydantic import BaseModel, ConfigDict, Field
+from src.configuration.constants import constants
 
 
 class PlayerInput(BaseModel):
@@ -36,7 +37,7 @@ class RosterInput(BaseModel):
         extra="forbid",
     )
 
-    players: list[PlayerInput]
+    players: list[PlayerInput] = Field(min_length=constants.min_players, max_length=constants.max_players)
 
 
 class BalanceInput(BaseModel):

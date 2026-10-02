@@ -40,6 +40,8 @@ def test_sends_configured_model_and_ordered_history(completion_mock: MagicMock) 
         "model": "vertex_ai/gemini-3.5-flash-lite",
         "vertex_location": "global",
         "stream": False,
+        "timeout": 30.0,
+        "num_retries": 0,
         "tools": None,
         "messages": [
             {"role": "user", "content": "Remember Alice"},
@@ -107,9 +109,10 @@ def test_tool_results_retain_matching_call_ids(completion_mock: MagicMock) -> No
     ]
 
 
-def test_provider_failure_propagates(completion_mock: MagicMock) -> None:
+def test_provider_failure_reaches_the_harness(completion_mock: MagicMock) -> None:
     failure: RuntimeError = RuntimeError("Authentication failed")
     completion_mock.side_effect = failure
     with pytest.raises(RuntimeError) as raised:
         generate_response((ChatMessage(constants.roles.USER, "Hello"),))
     assert raised.value is failure
+    assert completion_mock.call_count == 1

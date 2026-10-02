@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>bibs · Fair teams. More football.</title>
   <link rel="stylesheet" href="/static/styles.css?v=formatted-chat-25">
-  <script src="/static/chat.js?v=formatted-chat-25" defer></script>
-  <script src="/static/stadium.js?v=readable-roster-23" defer></script>
+  <script src="/static/chat.js?v=simple-sessions-29" defer></script>
+  <script src="/static/stadium.js?v=error-recovery-26" defer></script>
 </head>
 <body>
   <main id="home-screen" class="pitch-home" aria-label="bibs home">
@@ -38,7 +38,7 @@
   <main id="team-screen" class="team-screen" hidden>
     <header><a class="brand" href="#" aria-label="bibs home">bibs<span class="brand-dot">●</span></a><a class="quiet back-link" href="#">Back to the pitch</a></header>
     <section class="bench-heading" aria-label="Roster size">
-      <div class="bench-controls"><label for="player-count">Players <input id="player-count" type="number" min="3" step="1" value="10"></label><span id="roster-progress" role="status">0 of 10 seats filled</span></div>
+      <div class="bench-controls"><label for="player-count">Players <input id="player-count" type="number" min="3" max="22" step="1" value="10"></label><span id="roster-progress" role="status">0 of 10 seats filled</span></div>
     </section>
     <section class="stadium-stand" aria-label="Player bench"><div class="stand-roof" aria-hidden="true"></div><div id="bench-seats" class="bench-seats"></div><div class="sideline" aria-hidden="true"></div></section>
     <div class="bench-actions"><p id="bench-status" role="status">Click an empty seat to add your first player.</p><button id="use-roster" type="button" disabled>Send roster to chat <span aria-hidden="true">↗</span></button></div>
@@ -73,7 +73,7 @@
       <form id="chat-form">
         <label class="sr-only" for="message">Your message</label>
         <div class="compose"><textarea id="message" required maxlength="10000" rows="2" placeholder="Sara 5 GK, Ahmed 4, Maya 3…"></textarea><button id="send" type="submit">Send <span aria-hidden="true">↑</span></button></div>
-        <div class="composer-footer"><span id="status" role="status"></span></div>
+        <div class="composer-footer"><span id="status" role="status"></span><button id="recover-session" class="quiet" type="button" hidden>Start again with my bench roster</button></div>
       </form>
     </section>
   </main>

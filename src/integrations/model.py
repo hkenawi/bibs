@@ -10,7 +10,7 @@ from typing import cast
 
 import litellm
 from litellm.types.utils import ChatCompletionMessageToolCall, Choices, ModelResponse
-from pydantic import JsonValue, TypeAdapter
+from pydantic import JsonValue, TypeAdapter, ValidationError
 
 from src.application.models import ChatMessage, ToolDefinition, ToolRequest
 from src.configuration.constants import constants
@@ -34,6 +34,8 @@ def generate_response(
         messages=[serialize_message(message) for message in messages],
         stream=False,
         tools=list(tools) if tools else None,
+        timeout=30.0,
+        num_retries=0,
     ))
     choice: Choices = cast(Choices, response.choices[0])
     call: ChatCompletionMessageToolCall
@@ -71,10 +73,11 @@ def deserialize_tool_request(call: ChatCompletionMessageToolCall) -> ToolRequest
 
     Example: a call with id="c1", name="echo", arguments='{"value": 7}'
     becomes ToolRequest(call_id="c1", name="echo", arguments={"value": 7}).
-    Argument text must be valid JSON representing an object; otherwise Pydantic
-    raises a validation error. This function does not execute the requested tool."""
+    Malformed argument text is marked invalid so the harness can record a failure
+    and give the model a chance to correct its call. This function does not execute the requested tool."""
     
-    arguments: dict[str, JsonValue] = TypeAdapter(dict[str, JsonValue]).validate_json(
-        call.function.arguments,
-    )
+    try:
+        arguments: dict[str, JsonValue] = TypeAdapter(dict[str, JsonValue]).validate_json(call.function.arguments)
+    except ValidationError:
+        return ToolRequest(call.id, call.function.name, {}, invalid_arguments=True)
     return ToolRequest(call_id=call.id, name=call.function.name, arguments=arguments)

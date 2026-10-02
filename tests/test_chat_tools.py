@@ -63,11 +63,12 @@ def generate_unknown_tool_response(
 ) -> ChatMessage:
     return ChatMessage(constants.roles.ASSISTANT, "", (ToolRequest("unknown", "missing", {}),))
 
-def test_unknown_tool_exception_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_unknown_tool_is_recorded_for_model_correction(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(service, "generate_response", generate_unknown_tool_response)
     client: TestClient = TestClient(create_app())
-    with pytest.raises(KeyError, match="missing"):
-        client.post("/chat", json={"message": "Try a tool"})
+    response: Response = client.post("/chat", json={"message": "Try a tool"})
+    assert response.status_code == 200
+    assert response.json()["tool_calls"][0]["result"]["error"]["code"] == "UNKNOWN_TOOL"
 
 
 def generate_repeating_tool_response(
@@ -90,11 +91,14 @@ def generate_failing_response(
 ) -> ChatMessage:
     raise RuntimeError("secret-provider-detail")
 
-def test_provider_exception_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_provider_failure_returns_safe_chat_response(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(service, "generate_response", generate_failing_response)
     client: TestClient = TestClient(create_app())
-    with pytest.raises(RuntimeError, match="secret-provider-detail"):
-        client.post("/chat", json={"message": "Hello"})
+    response: Response = client.post("/chat", json={"message": "Hello"})
+    assert response.status_code == 200
+    assert set(response.json()) == {"response", "session_id", "tool_calls"}
+    assert "secret-provider-detail" not in response.text
+    assert "try again" in response.json()["response"].lower()
 
 
 def reject_arguments(arguments: dict[str, JsonValue]) -> dict[str, JsonValue]:
@@ -105,10 +109,12 @@ def reject_arguments(arguments: dict[str, JsonValue]) -> dict[str, JsonValue]:
 failing_tool: ChatTool = {"definition": echo_definition, "handler": reject_arguments}
 
 
-def test_tool_exception_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_tool_failure_returns_safe_record(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(service, "generate_response", generate_repeating_tool_response)
     client: TestClient = TestClient(create_app(
         tools=(failing_tool,),
     ))
-    with pytest.raises(ValueError, match="Invalid test input"):
-        client.post("/chat", json={"message": "Run the tool"})
+    response: Response = client.post("/chat", json={"message": "Run the tool"})
+    assert response.status_code == 200
+    assert response.json()["tool_calls"][0]["result"]["error"]["code"] == "TOOL_FAILED"
+    assert "Invalid test input" not in response.text

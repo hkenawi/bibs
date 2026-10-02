@@ -17,6 +17,13 @@ class ErrorCode(StrEnum):
     UNKNOWN_TOOL = "UNKNOWN_TOOL"
     TOOL_FAILED = "TOOL_FAILED"
     SESSION_EXPIRED = "SESSION_EXPIRED"
+    INVALID_INPUT = "INVALID_INPUT"
+    BAD_REQUEST = "BAD_REQUEST"
+    ACCESS_DENIED = "ACCESS_DENIED"
+    RATE_LIMITED = "RATE_LIMITED"
+    SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE"
+    TIMEOUT = "TIMEOUT"
+    INVALID_RESPONSE = "INVALID_RESPONSE"
 
 
 class GeminiSetting(StrEnum):
@@ -31,6 +38,8 @@ class Constants:
     errors: type[ErrorCode] = ErrorCode
     gemini: type[GeminiSetting] = GeminiSetting
     max_tool_rounds: int = 4
+    min_players: int = 3
+    max_players: int = 22
 
 
 constants: Constants = Constants()

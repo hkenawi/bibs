@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 from pydantic import JsonValue, ValidationError
 
 from src.application.models import ToolDefinition
+from src.application.errors import create_error_result, describe_validation_failure
+from src.configuration.constants import constants
 from src.tools.teams.models import BalanceInput, RosterPlayer
 
 if TYPE_CHECKING:
@@ -56,14 +58,12 @@ def balance_soccer_teams(
     try:
         settings = BalanceInput.model_validate(arguments)
     except ValidationError as error:
-        return {"ok": False, "error": str(error)}
+        return describe_validation_failure(error)
 
     players: tuple[RosterPlayer, ...] = session.roster
-    if len(players) < 3:
-        return {
-            "ok": False,
-            "error": "At least 3 players are needed to balance teams.",
-        }
+    if not constants.min_players <= len(players) <= constants.max_players:
+        return create_error_result(constants.errors.INVALID_INPUT,
+            "Teams require 3–22 players.", "Add or remove players and save the roster first.")
 
     dedicated_goalkeepers: bool = (
         session.dedicated_goalkeepers
@@ -74,13 +74,8 @@ def balance_soccer_teams(
     if dedicated_goalkeepers and sum(
         player.goalkeeper_willing for player in players
     ) < 2:
-        return {
-            "ok": False,
-            "error": (
-                "Dedicated goalkeepers require at least two willing "
-                "players. Identify another keeper or disable this option."
-            ),
-        }
+        return create_error_result(constants.errors.INVALID_INPUT,
+            "Dedicated goalkeepers require two willing players.", "Identify another keeper or disable dedicated goalkeepers.")
 
     home_size: int = (len(players) + 1) // 2
     total_rating: int = sum(player.rating for player in players)
@@ -120,7 +115,7 @@ def balance_soccer_teams(
             break
 
     if best_gap is None:
-        return {"ok": False, "error": "No valid team split was found."}
+        return create_error_result(constants.errors.INVALID_INPUT, "No valid team split was found.", "Check the roster and goalkeeper settings.")
 
     session.home = best_home
     session.away = best_away

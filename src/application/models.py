@@ -33,6 +33,7 @@ class ToolRequest:
     call_id: str
     name: str
     arguments: dict[str, JsonValue]
+    invalid_arguments: bool = False
 
 
 @dataclass(frozen=True)

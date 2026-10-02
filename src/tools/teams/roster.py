@@ -10,6 +10,8 @@ from uuid import uuid4
 from pydantic import JsonValue, ValidationError
 
 from src.application.models import ToolDefinition
+from src.application.errors import create_error_result, describe_validation_failure
+from src.configuration.constants import constants
 from src.tools.teams.models import PlayerInput, RosterInput, RosterPlayer
 
 if TYPE_CHECKING:
@@ -21,7 +23,7 @@ definition: ToolDefinition = {
     "function": {
         "name": "set_roster",
         "description": (
-            "Save the complete player list from chat. Each player needs "
+            "Save the complete player list of 3–22 players from chat. Each player needs "
             "a name and an integer skill rating from 1 to 5. Ask for "
             "missing ratings; do not invent them. GK means willing to "
             "play goalkeeper. For corrections, send the complete updated "
@@ -45,19 +47,14 @@ def set_roster(
     try:
         roster_input = RosterInput.model_validate(arguments)
     except ValidationError as error:
-        return {"ok": False, "error": str(error)}
+        return describe_validation_failure(error)
 
     normalized_names: list[str] = [
         player.name.casefold() for player in roster_input.players
     ]
     if len(normalized_names) != len(set(normalized_names)):
-        return {
-            "ok": False,
-            "error": (
-                "Players need distinct names. Add a surname or initial "
-                "to distinguish players with the same name."
-            ),
-        }
+        return create_error_result(constants.errors.INVALID_INPUT,
+            "Player names must be distinct.", "Add a surname or initial to distinguish duplicate names.")
 
     existing_ids: dict[str, str] = {
         player.name.casefold(): player.player_id

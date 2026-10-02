@@ -64,7 +64,7 @@ def test_local_browser_entry_and_health_are_available() -> None:
     assert client.get("/health").json() == {"status": "ok", "model_mode": "gemini"}
     page: Response = client.get("/")
     assert page.status_code == 200
-    assert "Gemini chat" in page.text
+    assert "Start a" in page.text and "conversation" in page.text
     assert client.get("/static/chat.js").status_code == 200
 
 

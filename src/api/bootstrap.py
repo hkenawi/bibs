@@ -24,6 +24,7 @@ def create_app(
     """
 
     app: FastAPI = FastAPI(title="bibs")
+
     sessions: dict[str, ConversationSession] = {}
     tool: ChatTool
     tool_registry: dict[str, ChatTool] | None = (

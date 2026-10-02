@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi.testclient import TestClient
 from httpx import Response
+from pydantic import JsonValue
 
 from src.api.bootstrap import create_app
 from src.application import service
@@ -28,7 +29,7 @@ def test_save_rosters_in_the_correct_chat_session(
                     ToolRequest(
                         "save-first",
                         "set_roster",
-                        {"players": [{"name": "Sara", "rating": 3}]},
+                        {"players": [{"name": "Sara", "rating": 3}, {"name": "Ahmed", "rating": 4}, {"name": "Maya", "rating": 2}]},
                     ),
                 ),
             ),
@@ -40,7 +41,7 @@ def test_save_rosters_in_the_correct_chat_session(
                     ToolRequest(
                         "save-second",
                         "set_roster",
-                        {"players": [{"name": "Sara", "rating": 2}]},
+                        {"players": [{"name": "Sara", "rating": 2}, {"name": "Ahmed", "rating": 4}, {"name": "Maya", "rating": 2}]},
                     ),
                 ),
             ),
@@ -52,7 +53,7 @@ def test_save_rosters_in_the_correct_chat_session(
                     ToolRequest(
                         "update-first",
                         "set_roster",
-                        {"players": [{"name": "Sara", "rating": 5}]},
+                        {"players": [{"name": "Sara", "rating": 5}, {"name": "Ahmed", "rating": 4}, {"name": "Maya", "rating": 2}]},
                     ),
                 ),
             ),
@@ -93,14 +94,8 @@ def test_save_rosters_in_the_correct_chat_session(
             },
         )
         assert updated.status_code == 200
-        assert updated.json()["tool_calls"][0]["result"] == {
-            "ok": True,
-            "players": [
-                {
-                    "player_id": first_player_id,
-                    "name": "Sara",
-                    "rating": 5,
-                    "goalkeeper_willing": False,
-                }
-            ],
+        updated_players: list[dict[str, JsonValue]] = updated.json()["tool_calls"][0]["result"]["players"]
+        assert updated_players[0] == {
+            "player_id": first_player_id, "name": "Sara", "rating": 5, "goalkeeper_willing": False,
         }
+        assert len(updated_players) == 3

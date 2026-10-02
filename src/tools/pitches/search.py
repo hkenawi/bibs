@@ -11,6 +11,9 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
 
 from src.application.models import ToolDefinition
+from src.application.errors import create_error_result, describe_validation_failure
+from src.configuration.constants import constants
+from src.application.errors import classify_external_failure
 
 if TYPE_CHECKING:
     from src.application.session_db import ConversationSession
@@ -57,7 +60,7 @@ def find_nearby_pitches(
     try:
         location = PitchSearchInput.model_validate(arguments)
     except ValidationError as error:
-        return {"ok": False, "error": str(error)}
+        return describe_validation_failure(error)
 
     query: str = f"""
         [out:json][timeout:20];
@@ -69,10 +72,9 @@ def find_nearby_pitches(
         out tags 3;
     """
 
-    response: httpx.Response
     payload: object
     try:
-        response = httpx.post(
+        response: httpx.Response = httpx.post(
             "https://overpass-api.de/api/interpreter",
             data={"data": query},
             headers={"User-Agent": "bibs/0.1"},
@@ -80,18 +82,15 @@ def find_nearby_pitches(
         )
         response.raise_for_status()
         payload = response.json()
-    except (httpx.HTTPError, ValueError):
-        return {
-            "ok": False,
-            "error": "Pitch search is unavailable right now. Try again later.",
-        }
+    except (httpx.HTTPError, ValueError) as error:
+        return classify_external_failure(error)
 
     if not isinstance(payload, dict) or payload.get("remark"):
-        return {"ok": False, "error": "Pitch search returned an invalid response."}
+        return create_error_result(constants.errors.INVALID_RESPONSE, "Pitch search returned an invalid response.", "Try another area or try again later.")
 
     elements: object = payload.get("elements")
     if not isinstance(elements, list):
-        return {"ok": False, "error": "Pitch search returned no results list."}
+        return create_error_result(constants.errors.INVALID_RESPONSE, "Pitch search returned no results list.", "Try again later.")
 
     pitches: list[JsonValue] = []
     element: object

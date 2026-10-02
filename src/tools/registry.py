@@ -10,6 +10,8 @@ from pydantic import JsonValue
 
 from src.application.models import ToolDefinition
 from src.application.session_db import ConversationSession
+from src.application.errors import create_error_result
+from src.configuration.constants import constants
 from src.tools.pitches import search
 from src.tools.teams import balance, roster
 
@@ -42,4 +44,7 @@ def run_tool(
 ) -> dict[str, JsonValue]:
     """Execute the requested tool with the current conversation session."""
 
+    if name not in HANDLERS:
+        return create_error_result(constants.errors.UNKNOWN_TOOL,
+            "This tool is not available.", "Choose a registered tool.")
     return HANDLERS[name](arguments, session)

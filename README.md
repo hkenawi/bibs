@@ -78,8 +78,10 @@ Use `create_app(tools=())` to disable all tools or pass a tuple to replace the d
 contain `response`, `session_id`, and `tool_calls`, including an empty array when
 no tool ran. Reusing the session ID retains history; an unknown ID returns HTTP 404
 with `SESSION_EXPIRED`. `GET /health` checks the process without calling a model.
-Model and tool exceptions currently propagate; custom error handling is deferred
-to a dedicated phase. The existing session-not-found response remains in place.
+Failures return safe, actionable messages and preserve completed tool records.
+External requests classify HTTP failures and use 30-second request timeouts.
+They execute once, without automatic retries. There is no overall time limit on a chat turn. Unknown tools and invalid arguments are returned to the
+model for correction within the existing tool-round limit.
 
 ## Current limits and next steps
 
@@ -87,9 +89,11 @@ This is the Phase 1 architectural foundation. The course starter ZIP has not bee
 inspected, so compatibility with its implementation is unverified. A real Gemini
 request and starter-derived workflow remain unverified Phase 1 completion gates.
 
-Sessions disappear on restart. Use one worker. Concurrent updates to the same
-session are not coordinated yet and can overwrite history. This initial browser keeps its ID
-only while the page remains open; refresh restoration, clear/reset endpoints,
-roster management, soccer tools, pitch search, and the final interface are later phases.
-The round limit bounds model/tool cycles; provider timeouts, retries, raw tool JSON
-validation, and production hardening belong to the dedicated error-handling phase.
+Sessions disappear on restart. Use one worker. Concurrent changes to the same session are not coordinated.
+The browser retains its tab-specific ID across refresh and restores completed
+conversation, roster, and team state through `GET /session`. Duplicated tabs start
+independent sessions. An expired session offers explicit recovery using the bench
+roster. Compare/rebalance tools and clear/reset endpoints remain later work.
+The roster is limited to 3–22 players. Requests execute normally without request-ID
+tracking, replay protection, or locks. No new dependencies or persistent storage
+were introduced.

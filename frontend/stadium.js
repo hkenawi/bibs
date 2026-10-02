@@ -15,7 +15,8 @@ const playerRating = document.querySelector("#player-rating");
 const playerKeeper = document.querySelector("#player-keeper");
 const playerError = document.querySelector("#player-error");
 const removePlayer = document.querySelector("#remove-player");
-let benchPlayers = Array(10).fill(null);
+let benchPlayers = readTabValue("bibs.bench", Array(10).fill(null));
+if (!Array.isArray(benchPlayers) || benchPlayers.length < 3 || benchPlayers.length > 22) benchPlayers = Array(10).fill(null);
 let selectedSeat = null;
 let navigationTimer;
 let activeScreen = "home";
@@ -45,6 +46,8 @@ function showStadiumScreen() {
 }
 
 function renderBenchSeats() {
+  writeTabValue("bibs.bench", benchPlayers);
+  playerCount.value = benchPlayers.length;
   benchSeats.replaceChildren();
   let benchRow;
   benchPlayers.forEach((player, index) => {
@@ -121,9 +124,9 @@ removePlayer.addEventListener("click", () => {
 });
 playerCount.addEventListener("change", () => {
   const count = Number(playerCount.value);
-  if (!Number.isSafeInteger(count) || count < 3) {
+  if (!Number.isSafeInteger(count) || count < 3 || count > 22) {
     playerCount.value = benchPlayers.length;
-    benchStatus.textContent = "Choose a whole number of at least 3 players.";
+    benchStatus.textContent = "Choose a whole number from 3 to 22 players.";
     return;
   }
   if (count < benchPlayers.length && benchPlayers.slice(count).some(Boolean)) {
@@ -148,6 +151,11 @@ useRoster.addEventListener("click", () => {
   location.hash = "chat";
   showStadiumScreen();
   form.requestSubmit();
+});
+window.addEventListener("restore-roster", ({ detail }) => {
+  if (!detail.length) return;
+  benchPlayers = Array.from({ length: Math.max(10, detail.length) }, (_, index) => detail[index] || null);
+  renderBenchSeats();
 });
 window.addEventListener("hashchange", showStadiumScreen);
 window.addEventListener("load-sample-roster", () => {

@@ -7,7 +7,17 @@ const conversation = document.querySelector("#conversation");
 const status = document.querySelector("#status");
 const restart = document.querySelector("#restart");
 const welcome = conversation.querySelector(".welcome").cloneNode(true);
-let sessionId = null;
+function readTabValue(key, fallback = null) {
+  try { return JSON.parse(sessionStorage.getItem(key)) ?? fallback; }
+  catch { return fallback; }
+}
+
+function writeTabValue(key, value) {
+  try { sessionStorage.setItem(key, JSON.stringify(value)); } catch { /* Storage may be disabled. */ }
+}
+
+let sessionId = readTabValue("bibs.session");
+const recovery = document.querySelector("#recover-session");
 let pending = false;
 
 function appendFormattedText(element, text) {
@@ -103,56 +113,132 @@ input.addEventListener("keydown", (event) => {
   }
 });
 
+async function readChatResponse(response) {
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    const detail = result?.detail;
+    const error = new Error(detail?.message || (response.status >= 500
+      ? "The server couldn't complete your request. Try again shortly."
+      : "The request was rejected. Check your message and try again."));
+    error.code = detail?.code;
+    throw error;
+  }
+  if (!result || typeof result !== "object") throw new Error("The server returned an unreadable response. Try again.");
+  return result;
+}
+
+function setChatPending(value) {
+  pending = value;
+  send.disabled = value;
+  input.disabled = value;
+  restart.disabled = value;
+  recovery.disabled = value;
+}
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = input.value.trim();
   if (pending || !message) return;
-  pending = true;
-  send.disabled = true;
-  input.disabled = true;
-  restart.disabled = true;
+  setChatPending(true);
+  recovery.hidden = true;
   conversation.querySelector(".welcome")?.remove();
   appendMessage("You", message);
   input.value = "";
   const reply = appendMessage("bibs", "Thinking…", true);
   status.textContent = "Working on it…";
   const request = { message };
-  if (sessionId) request.session_id = sessionId;
+  if (sessionId && !request.session_id) request.session_id = sessionId;
   try {
     const response = await fetch("/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
     });
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.detail?.message || "Message could not be sent. Please try again.");
-    }
+    const result = await readChatResponse(response);
     sessionId = result.session_id;
+    writeTabValue("bibs.session", sessionId);
     for (const call of result.tool_calls || []) displayToolCall(call, reply);
     displayAssistantResponse(reply.querySelector(".content"), result.response);
     status.textContent = "";
   } catch (error) {
     reply.classList.add("error");
-    reply.querySelector(".content").textContent = error instanceof Error ? error.message : "Unable to send the message.";
-    input.value = message;
-    status.textContent = "Your message is ready to retry.";
+    reply.querySelector(".content").textContent = error.name === "TimeoutError"
+      ? "The connection timed out. Completed operations may still have been saved."
+      : error instanceof TypeError ? "Unable to reach the server. Check your connection."
+      : error.message || "The request failed. Please try again.";
+    const expired = error.code === "SESSION_EXPIRED";
+    recovery.hidden = !expired;
+    status.textContent = expired ? "Start again with your bench roster." : "Check your connection. Completed operations may still have been saved.";
   } finally {
     reply.classList.remove("loading");
-    pending = false;
-    send.disabled = false;
-    input.disabled = false;
-    restart.disabled = false;
+    setChatPending(false);
     conversation.scrollTop = conversation.scrollHeight;
     input.focus();
   }
 });
 
+async function restoreCompletedSession() {
+  if (!sessionId) return;
+  setChatPending(true);
+  try {
+    const result = await readChatResponse(await fetch(`/session?session_id=${encodeURIComponent(sessionId)}`, {
+      signal: AbortSignal.timeout(10000),
+    }));
+    conversation.replaceChildren();
+    if (!result.turns.length) conversation.append(welcome.cloneNode(true));
+    for (const turn of result.turns) {
+      appendMessage("You", turn.message);
+      const reply = appendMessage("bibs", "");
+      for (const call of turn.tool_calls) displayToolCall(call, reply);
+      displayAssistantResponse(reply.querySelector(".content"), turn.response);
+    }
+    window.dispatchEvent(new CustomEvent("restore-roster", { detail: result.state.roster || [] }));
+  } catch (error) {
+    recovery.hidden = error.code !== "SESSION_EXPIRED";
+    status.textContent = error.message;
+  } finally { setChatPending(false); }
+}
+
+// sessionStorage survives refresh. A duplicated tab must claim a fresh session.
+async function initializeTabSession() {
+  setChatPending(true);
+  if (typeof BroadcastChannel !== "undefined") {
+    const channel = new BroadcastChannel("bibs.tabs");
+    const token = crypto.randomUUID();
+    let claimed = false;
+    channel.onmessage = ({ data }) => {
+      if (!sessionId || data.session !== sessionId) return;
+      if (data.query) channel.postMessage({ session: sessionId, owner: data.query });
+      if (data.owner === token) claimed = true;
+    };
+    if (sessionId) {
+      channel.postMessage({ session: sessionId, query: token });
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    if (claimed) {
+      sessionId = null;
+      writeTabValue("bibs.session", null);
+    }
+    // Keep answering ownership checks for subsequently duplicated tabs.
+  }
+  await restoreCompletedSession();
+  setChatPending(false);
+}
+const chatReady = initializeTabSession();
+
 restart.addEventListener("click", () => {
   if (pending) return;
   sessionId = null;
+  writeTabValue("bibs.session", null);
+  recovery.hidden = true;
   conversation.replaceChildren(welcome.cloneNode(true));
   input.value = "";
   status.textContent = "New conversation ready.";
   input.focus();
+});
+
+recovery.addEventListener("click", () => {
+  restart.click();
+  if (benchPlayers.filter(Boolean).length >= 3) useRoster.click();
+  else { location.hash = "team"; benchStatus.textContent = "Add at least 3 players to restart with a roster."; }
 });
