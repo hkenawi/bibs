@@ -3,26 +3,79 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>bibs · Local chat</title>
-  <link rel="stylesheet" href="/static/styles.css">
-  <script src="/static/chat.js" defer></script>
+  <title>bibs · Fair teams. More football.</title>
+  <link rel="stylesheet" href="/static/styles.css?v=formatted-chat-25">
+  <script src="/static/chat.js?v=formatted-chat-25" defer></script>
+  <script src="/static/stadium.js?v=readable-roster-23" defer></script>
 </head>
 <body>
-  <main>
-    <header><div><span class="eyebrow">bibs</span><h1>Fair teams. More football.</h1></div>
-      <span class="badge">Gemini chat</span></header>
-    <p class="intro">Ask Gemini which tools it has access to. Team and pitch search tools are available as placeholders; their actions are not implemented yet.</p>
-    <section id="conversation" aria-label="Conversation" aria-live="polite">
-      <p class="welcome">Send a message to try the local chat workflow.</p>
+  <main id="home-screen" class="pitch-home" aria-label="bibs home">
+    <div class="pitch-wrap">
+      <svg class="pitch" viewBox="0 0 1200 760" role="img" aria-label="Soccer pitch with bibs in the center circle">
+        <defs>
+          <pattern id="grass" width="200" height="760" patternUnits="userSpaceOnUse"><rect width="200" height="760" fill="#b4d58e"/><rect width="100" height="760" fill="#bfde9e"/></pattern>
+          <pattern id="net" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M12 0H0V12" fill="none" stroke="#d5dcc2" stroke-opacity=".25"/></pattern>
+        </defs>
+        <rect class="turf" width="1200" height="760" rx="0" fill="url(#grass)"/>
+        <g class="pitch-lines" fill="none" stroke="#9dd3c4" stroke-width="2" stroke-opacity=".65">
+          <rect x="85" y="65" width="1030" height="630"/>
+          <path d="M600 65V695"/>
+          <circle cx="600" cy="380" r="112"/>
+          <path d="M85 195H260V565H85 M1115 195H940V565H1115 M85 285H150V475H85 M1115 285H1050V475H1115"/>
+          <path d="M260 300Q325 380 260 460 M940 300Q875 380 940 460"/>
+          <path d="M85 85Q105 85 105 65 M1095 65Q1095 85 1115 85 M85 675Q105 675 105 695 M1095 695Q1095 675 1115 675"/>
+          <rect x="35" y="315" width="50" height="130" fill="url(#net)"/><rect x="1115" y="315" width="50" height="130" fill="url(#net)"/>
+        </g>
+        <g fill="#e0e6cc"><circle cx="205" cy="380" r="3"/><circle cx="995" cy="380" r="3"/></g>
+        <text class="pitch-wordmark" x="600" y="400" text-anchor="middle">bibs</text>
+        <g class="rolling-ball" aria-hidden="true"><circle r="9" fill="#f2efdc"/><path d="M-4-3L2-5L6 0L2 5L-4 3Z" fill="#244634"/></g>
+      </svg>
+      <a class="goal-button goal-chat" href="#chat">Start a<br>conversation <span aria-hidden="true">↗</span></a>
+      <a class="goal-button goal-team" href="#team">Set a team <span aria-hidden="true">↗</span></a>
+    </div>
+    <div class="stadium-mini-bench" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </main>
+  <main id="team-screen" class="team-screen" hidden>
+    <header><a class="brand" href="#" aria-label="bibs home">bibs<span class="brand-dot">●</span></a><a class="quiet back-link" href="#">Back to the pitch</a></header>
+    <section class="bench-heading" aria-label="Roster size">
+      <div class="bench-controls"><label for="player-count">Players <input id="player-count" type="number" min="3" step="1" value="10"></label><span id="roster-progress" role="status">0 of 10 seats filled</span></div>
     </section>
-    <p id="status" role="status"></p>
-    <form id="chat-form">
-      <label for="message">Your message</label>
-      <div class="compose"><textarea id="message" required maxlength="10000" rows="2" placeholder="Hello bibs"></textarea>
-        <button id="send" type="submit">Send</button></div>
+    <section class="stadium-stand" aria-label="Player bench"><div class="stand-roof" aria-hidden="true"></div><div id="bench-seats" class="bench-seats"></div><div class="sideline" aria-hidden="true"></div></section>
+    <div class="bench-actions"><p id="bench-status" role="status">Click an empty seat to add your first player.</p><button id="use-roster" type="button" disabled>Send roster to chat <span aria-hidden="true">↗</span></button></div>
+    <p class="bench-note">Your entries stay here while this page is open. Send your roster to chat when you’re ready.</p>
+  </main>
+  <dialog id="player-dialog" aria-labelledby="player-dialog-title">
+    <form id="player-form">
+      <div class="dialog-heading"><h2 id="player-dialog-title">Add player</h2><button id="close-player" class="quiet" type="button" aria-label="Close player form">×</button></div>
+      <label for="player-name">Player name</label><input id="player-name" type="text" required maxlength="100" autocomplete="off">
+      <label for="player-rating">Skill rating</label><select id="player-rating" required><option value="">Choose a rating</option><option value="1">1 · Beginner</option><option value="2">2 · Developing</option><option value="3">3 · Intermediate</option><option value="4">4 · Strong</option><option value="5">5 · Advanced</option></select>
+      <label class="keeper-choice"><input id="player-keeper" type="checkbox">Willing to play goalkeeper</label>
+      <p id="player-error" role="alert"></p>
+      <div class="player-actions"><button id="remove-player" class="quiet" type="button" hidden>Remove player</button><button class="save-player" type="submit">Save player</button></div>
     </form>
-    <button id="restart" type="button" hidden>Start a new conversation</button>
-    <footer>Responses are generated by Gemini. Sessions are stored in server memory.</footer>
+  </dialog>
+  <main id="chat-screen" hidden>
+    <header>
+      <a class="brand" href="#" aria-label="bibs home">bibs<span class="brand-dot">●</span></a>
+      <div class="header-actions"><button id="restart" class="quiet" type="button">New conversation</button><a class="quiet back-link" href="#" aria-label="Close chat">×</a></div>
+    </header>
+    <section class="chat-panel" aria-label="Football chat">
+      <section id="conversation" aria-label="Conversation" aria-live="polite" aria-relevant="additions text">
+        <div class="welcome">
+          <p>Start with player names and skill ratings from 1–5. Add “GK” for anyone willing to play in goal. Then ask for fair teams or find a local pitch.</p>
+          <div class="examples" aria-label="Example prompts">
+            <button class="example" type="button" data-action="sample-roster"><span>01 / ADD PLAYERS</span>Try a 10-player roster <span aria-hidden="true">↗</span></button>
+            <button class="example" type="button" data-prompt="Using the saved roster, make fair teams with a willing goalkeeper on each side. Explain the skill rating gap."><span>02 / MAKE TEAMS</span>Balance my saved roster <span aria-hidden="true">↗</span></button>
+            <button class="example" type="button" data-prompt="Find soccer pitches in Harlem, New York. Show the map links."><span>03 / FIND A PITCH</span>Find somewhere to play <span aria-hidden="true">↗</span></button>
+          </div>
+        </div>
+      </section>
+      <form id="chat-form">
+        <label class="sr-only" for="message">Your message</label>
+        <div class="compose"><textarea id="message" required maxlength="10000" rows="2" placeholder="Sara 5 GK, Ahmed 4, Maya 3…"></textarea><button id="send" type="submit">Send <span aria-hidden="true">↑</span></button></div>
+        <div class="composer-footer"><span id="status" role="status"></span></div>
+      </form>
+    </section>
   </main>
 </body>
 </html>
