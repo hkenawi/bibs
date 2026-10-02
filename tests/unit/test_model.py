@@ -17,7 +17,7 @@ from src.integrations.model import generate_response
 
 @pytest.fixture
 def completion_mock(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
-    completion: MagicMock = MagicMock(return_value=ModelResponse(choices=[{
+    completion = MagicMock(return_value=ModelResponse(choices=[{
         "message": {"role": "assistant", "content": "Hello from Gemini."},
         "finish_reason": "stop",
     }]))
@@ -26,7 +26,7 @@ def completion_mock(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 
 
 def test_text_reply_becomes_assistant_message(completion_mock: MagicMock) -> None:
-    reply: ChatMessage = generate_response((ChatMessage(constants.roles.USER, "Hi"),))
+    reply = generate_response((ChatMessage(constants.roles.USER, "Hi"),))
     assert reply == ChatMessage(constants.roles.ASSISTANT, "Hello from Gemini.")
 
 
@@ -52,7 +52,7 @@ def test_sends_configured_model_and_ordered_history(completion_mock: MagicMock) 
 
 
 def test_sends_available_tool_definitions(completion_mock: MagicMock) -> None:
-    definition: ToolDefinition = {
+    definition = {
         "type": "function",
         "function": {
             "name": "weather", "description": "Get weather",
@@ -86,7 +86,7 @@ def test_tool_calls_preserve_ids_and_parse_arguments(completion_mock: MagicMock)
         },
         "finish_reason": "tool_calls",
     }])
-    reply: ChatMessage = generate_response((ChatMessage(constants.roles.USER, "Weather?"),))
+    reply = generate_response((ChatMessage(constants.roles.USER, "Weather?"),))
     assert reply == ChatMessage(constants.roles.ASSISTANT, "", (
         ToolRequest("call-1", "weather", {"city": "New York"}),
         ToolRequest("call-2", "weather", {"city": "Boston"}),
@@ -110,7 +110,7 @@ def test_tool_results_retain_matching_call_ids(completion_mock: MagicMock) -> No
 
 
 def test_provider_failure_reaches_the_harness(completion_mock: MagicMock) -> None:
-    failure: RuntimeError = RuntimeError("Authentication failed")
+    failure = RuntimeError("Authentication failed")
     completion_mock.side_effect = failure
     with pytest.raises(RuntimeError) as raised:
         generate_response((ChatMessage(constants.roles.USER, "Hello"),))

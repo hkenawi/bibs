@@ -16,7 +16,7 @@ from src.application.models import (
 from src.configuration.constants import constants
 
 
-echo_definition: ToolDefinition = {
+echo_definition = {
     "type": "function",
     "function": {
         "name": "echo", "description": "Return a supplied value for a contract test.",
@@ -30,7 +30,7 @@ def echo_value(arguments: dict[str, JsonValue]) -> dict[str, JsonValue]:
     return {"ok": True, "data": arguments}
 
 
-echo_tool: ChatTool = {"definition": echo_definition, "handler": echo_value}
+echo_tool = {"definition": echo_definition, "handler": echo_value}
 
 
 def generate_tool_response(
@@ -48,8 +48,8 @@ def generate_tool_response(
 
 def test_executed_tools_are_recorded_in_order_and_returned_to_model(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(service, "generate_response", generate_tool_response)
-    client: TestClient = TestClient(create_app(tools=(echo_tool,)))
-    response: Response = client.post("/chat", json={"message": "Run the test tools"})
+    client = TestClient(create_app(tools=(echo_tool,)))
+    response = client.post("/chat", json={"message": "Run the test tools"})
     assert response.status_code == 200
     assert response.json()["response"] == "Both results received."
     assert response.json()["tool_calls"] == [
@@ -65,8 +65,8 @@ def generate_unknown_tool_response(
 
 def test_unknown_tool_is_recorded_for_model_correction(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(service, "generate_response", generate_unknown_tool_response)
-    client: TestClient = TestClient(create_app())
-    response: Response = client.post("/chat", json={"message": "Try a tool"})
+    client = TestClient(create_app())
+    response = client.post("/chat", json={"message": "Try a tool"})
     assert response.status_code == 200
     assert response.json()["tool_calls"][0]["result"]["error"]["code"] == "UNKNOWN_TOOL"
 
@@ -78,10 +78,10 @@ def generate_repeating_tool_response(
 
 def test_loop_stops_before_executing_tools_beyond_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(service, "generate_response", generate_repeating_tool_response)
-    client: TestClient = TestClient(create_app(
+    client = TestClient(create_app(
         tools=(echo_tool,),
     ))
-    response: Response = client.post("/chat", json={"message": "Repeat"})
+    response = client.post("/chat", json={"message": "Repeat"})
     assert "limit" in response.json()["response"]
     assert len(response.json()["tool_calls"]) == 4
 
@@ -93,8 +93,8 @@ def generate_failing_response(
 
 def test_provider_failure_returns_safe_chat_response(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(service, "generate_response", generate_failing_response)
-    client: TestClient = TestClient(create_app())
-    response: Response = client.post("/chat", json={"message": "Hello"})
+    client = TestClient(create_app())
+    response = client.post("/chat", json={"message": "Hello"})
     assert response.status_code == 200
     assert set(response.json()) == {"response", "session_id", "tool_calls"}
     assert "secret-provider-detail" not in response.text
@@ -106,15 +106,15 @@ def reject_arguments(arguments: dict[str, JsonValue]) -> dict[str, JsonValue]:
     raise ValueError("Invalid test input")
 
 
-failing_tool: ChatTool = {"definition": echo_definition, "handler": reject_arguments}
+failing_tool = {"definition": echo_definition, "handler": reject_arguments}
 
 
 def test_tool_failure_returns_safe_record(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(service, "generate_response", generate_repeating_tool_response)
-    client: TestClient = TestClient(create_app(
+    client = TestClient(create_app(
         tools=(failing_tool,),
     ))
-    response: Response = client.post("/chat", json={"message": "Run the tool"})
+    response = client.post("/chat", json={"message": "Run the tool"})
     assert response.status_code == 200
     assert response.json()["tool_calls"][0]["result"]["error"]["code"] == "TOOL_FAILED"
     assert "Invalid test input" not in response.text

@@ -20,7 +20,7 @@ from src.configuration.constants import constants
 def test_save_rosters_in_the_correct_chat_session(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    completion: MagicMock = MagicMock(
+    completion = MagicMock(
         side_effect=[
             ChatMessage(
                 constants.roles.ASSISTANT,
@@ -63,19 +63,19 @@ def test_save_rosters_in_the_correct_chat_session(
     monkeypatch.setattr(service, "generate_response", completion)
 
     with TestClient(create_app()) as client:
-        first: Response = client.post(
+        first = client.post(
             "/chat",
             json={"message": "Sara, 3"},
         )
         assert first.status_code == 200
         assert first.json()["tool_calls"][0]["result"]["ok"] is True
 
-        first_session_id: str = first.json()["session_id"]
-        first_player_id: str = (
+        first_session_id = first.json()["session_id"]
+        first_player_id = (
             first.json()["tool_calls"][0]["result"]["players"][0]["player_id"]
         )
 
-        second: Response = client.post(
+        second = client.post(
             "/chat",
             json={"message": "Sara, 2"},
         )
@@ -86,7 +86,7 @@ def test_save_rosters_in_the_correct_chat_session(
             != first_player_id
         )
 
-        updated: Response = client.post(
+        updated = client.post(
             "/chat",
             json={
                 "session_id": first_session_id,
@@ -94,7 +94,7 @@ def test_save_rosters_in_the_correct_chat_session(
             },
         )
         assert updated.status_code == 200
-        updated_players: list[dict[str, JsonValue]] = updated.json()["tool_calls"][0]["result"]["players"]
+        updated_players = updated.json()["tool_calls"][0]["result"]["players"]
         assert updated_players[0] == {
             "player_id": first_player_id, "name": "Sara", "rating": 5, "goalkeeper_willing": False,
         }

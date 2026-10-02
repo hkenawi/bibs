@@ -21,15 +21,14 @@ from pydantic import JsonValue
 
 def test_default_tools_are_advertised_to_model(monkeypatch: pytest.MonkeyPatch) -> None:
     """A chat question sends three described tool schemas to the provider."""
-    completion: MagicMock = MagicMock(return_value=ModelResponse(choices=[{
+    completion = MagicMock(return_value=ModelResponse(choices=[{
         "message": {"role": "assistant", "content": "Three tools are available."},
     }]))
     monkeypatch.setattr(litellm, "completion", completion)
-    response: Response = TestClient(create_app()).post(
+    response = TestClient(create_app()).post(
         "/chat", json={"message": "What tools do you have access to?"},
     )
     assert response.status_code == 200
-    tool: ToolDefinition
     assert {tool["function"]["name"] for tool in completion.call_args.kwargs["tools"]} == {
         "set_roster", "balance_soccer_teams",
         "find_nearby_pitches",
@@ -42,11 +41,11 @@ def test_default_tools_are_advertised_to_model(monkeypatch: pytest.MonkeyPatch) 
 
 def test_explicit_empty_registry_disables_default_tools(monkeypatch: pytest.MonkeyPatch) -> None:
     """Explicit tools=() sends no tools to the model."""
-    completion: MagicMock = MagicMock(return_value=ModelResponse(choices=[{
+    completion = MagicMock(return_value=ModelResponse(choices=[{
         "message": {"role": "assistant", "content": "No tools."},
     }]))
     monkeypatch.setattr(litellm, "completion", completion)
-    response: Response = TestClient(create_app(tools=())).post("/chat", json={"message": "Hi"})
+    response = TestClient(create_app(tools=())).post("/chat", json={"message": "Hi"})
     assert response.status_code == 200
     assert completion.call_args.kwargs["tools"] is None
 
@@ -58,12 +57,12 @@ def test_pitch_search_call_is_recorded_and_returned_to_model(
     monkeypatch: pytest.MonkeyPatch, tool_name: str, arguments: dict[str, JsonValue],
 ) -> None:
     """A pitch search result is recorded and returned to the model."""
-    search_response: Response = Response(
+    search_response = Response(
         200, json={"elements": []},
         request=Request("POST", "https://overpass-api.de/api/interpreter"),
     )
     monkeypatch.setattr(httpx, "post", MagicMock(return_value=search_response))
-    completion: MagicMock = MagicMock(side_effect=[
+    completion = MagicMock(side_effect=[
         ModelResponse(choices=[{"message": {"role": "assistant", "content": None,
             "tool_calls": [{"id": "placeholder-call", "type": "function", "function": {
                 "name": tool_name, "arguments": dumps(arguments),
@@ -71,14 +70,14 @@ def test_pitch_search_call_is_recorded_and_returned_to_model(
         ModelResponse(choices=[{"message": {"role": "assistant", "content": "This tool is not implemented yet."}}]),
     ])
     monkeypatch.setattr(litellm, "completion", completion)
-    response: Response = TestClient(create_app()).post("/chat", json={"message": "Try this tool"})
+    response = TestClient(create_app()).post("/chat", json={"message": "Try this tool"})
     assert response.status_code == 200
     assert response.json()["response"] == "This tool is not implemented yet."
     assert len(response.json()["tool_calls"]) == 1
-    record: dict[str, JsonValue] = response.json()["tool_calls"][0]
+    record = response.json()["tool_calls"][0]
     assert record["name"] == tool_name
     assert record["args"] == arguments
-    result: dict[str, JsonValue] = response.json()["tool_calls"][0]["result"]
+    result = response.json()["tool_calls"][0]["result"]
     assert result["ok"] is True
     assert result["pitches"] == []
     assert loads(completion.call_args.kwargs["messages"][-1]["content"]) == result

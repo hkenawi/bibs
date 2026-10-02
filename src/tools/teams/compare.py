@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from src.application.session_db import ConversationSession
 
 
-definition: ToolDefinition = {
+definition = {
     "type": "function",
     "function": {
         "name": "compare_team_options",

@@ -27,8 +27,7 @@ def generate_response(
     constants.roles members. Actual model output varies.
     Tool requests are returned for the agent loop to execute."""
 
-    message: ChatMessage
-    response: ModelResponse = cast(ModelResponse, litellm.completion(
+    response = cast(ModelResponse, litellm.completion(
         model=constants.gemini.MODEL.value,
         vertex_location=constants.gemini.LOCATION.value,
         messages=[serialize_message(message) for message in messages],
@@ -37,8 +36,7 @@ def generate_response(
         timeout=30.0,
         num_retries=0,
     ))
-    choice: Choices = cast(Choices, response.choices[0])
-    call: ChatCompletionMessageToolCall
+    choice = cast(Choices, response.choices[0])
     return ChatMessage(
         role=constants.roles.ASSISTANT,
         content=choice.message.content or "",
@@ -55,9 +53,8 @@ def serialize_message(message: ChatMessage) -> dict[str, JsonValue]:
     USER denotes constants.roles.USER. Tool requests also include their IDs,
     names, and JSON argument strings; tool results include the matching call ID."""
 
-    payload: dict[str, JsonValue] = dict(role=message.role.value, content=message.content)
+    payload = dict(role=message.role.value, content=message.content)
     if message.tool_calls:
-        call: ToolRequest
         payload["tool_calls"] = [dict(
             id=call.call_id,
             type="function",
@@ -77,7 +74,7 @@ def deserialize_tool_request(call: ChatCompletionMessageToolCall) -> ToolRequest
     and give the model a chance to correct its call. This function does not execute the requested tool."""
     
     try:
-        arguments: dict[str, JsonValue] = TypeAdapter(dict[str, JsonValue]).validate_json(call.function.arguments)
+        arguments = TypeAdapter(dict[str, JsonValue]).validate_json(call.function.arguments)
     except ValidationError:
         return ToolRequest(call.id, call.function.name, {}, invalid_arguments=True)
     return ToolRequest(call_id=call.id, name=call.function.name, arguments=arguments)

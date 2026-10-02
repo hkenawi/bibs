@@ -11,7 +11,7 @@ from src.tools.teams.models import RosterPlayer
 
 
 def test_balance_and_save_teams_with_equal_total_ratings() -> None:
-    session: ConversationSession = ConversationSession(
+    session = ConversationSession(
         roster=(
             RosterPlayer(player_id="p1", name="Ahmed", rating=5),
             RosterPlayer(player_id="p2", name="Sara", rating=4),
@@ -20,7 +20,7 @@ def test_balance_and_save_teams_with_equal_total_ratings() -> None:
         )
     )
 
-    result: dict[str, JsonValue] = balance_soccer_teams({}, session)
+    result = balance_soccer_teams({}, session)
 
     assert result["ok"] is True
     assert result["home_total"] == 6

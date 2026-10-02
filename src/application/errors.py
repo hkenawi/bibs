@@ -27,7 +27,7 @@ def create_error_result(
 
 def classify_external_failure(error: Exception) -> dict[str, JsonValue]:
     """Map HTTP and transport failures to stable codes, never raw bodies."""
-    status: object = getattr(error, "status_code", None)
+    status = getattr(error, "status_code", None)
     if isinstance(error, httpx.HTTPStatusError):
         status = error.response.status_code
     if status in (401, 403):
@@ -55,9 +55,8 @@ def classify_external_failure(error: Exception) -> dict[str, JsonValue]:
 
 def describe_validation_failure(error: ValidationError) -> dict[str, JsonValue]:
     """Expose field locations and validation advice without raw input values."""
-    issues: list[str] = []
-    issue: dict[str, object]
+    issues = []
     for issue in error.errors(include_input=False, include_url=False, include_context=False):
-        location: str = ".".join(str(part) for part in cast(tuple[str | int, ...], issue["loc"]))
+        location = ".".join(str(part) for part in cast(tuple[str | int, ...], issue["loc"]))
         issues.append(f"{location}: {issue['msg']}")
     return create_error_result(ErrorCode.INVALID_INPUT, "; ".join(issues), "Correct these fields and try again.")

@@ -20,8 +20,8 @@ def create_roster_arguments(rating: int = 3) -> dict[str, JsonValue]:
 
 
 def test_save_player_with_server_assigned_id() -> None:
-    session: ConversationSession = ConversationSession()
-    result: dict[str, JsonValue] = set_roster(create_roster_arguments(), session)
+    session = ConversationSession()
+    result = set_roster(create_roster_arguments(), session)
     assert result["ok"] is True
     assert len(session.roster) == 3
     assert session.roster[0].player_id
@@ -31,18 +31,18 @@ def test_save_player_with_server_assigned_id() -> None:
 
 
 def test_replace_roster_and_preserve_matching_player_id() -> None:
-    session: ConversationSession = ConversationSession()
+    session = ConversationSession()
     set_roster(create_roster_arguments(), session)
-    original_id: str = session.roster[0].player_id
+    original_id = session.roster[0].player_id
     set_roster(create_roster_arguments(rating=5), session)
     assert session.roster[0].player_id == original_id
     assert session.roster[0].rating == 5
 
 
 def test_reject_missing_rating_without_changing_roster() -> None:
-    session: ConversationSession = ConversationSession()
+    session = ConversationSession()
     set_roster(create_roster_arguments(), session)
-    result: dict[str, JsonValue] = set_roster({"players": [
+    result = set_roster({"players": [
         {"name": "Sara"}, {"name": "Ahmed", "rating": 4}, {"name": "Maya", "rating": 2},
     ]}, session)
     assert result["ok"] is False
@@ -51,8 +51,8 @@ def test_reject_missing_rating_without_changing_roster() -> None:
 
 
 def test_reject_duplicate_names() -> None:
-    session: ConversationSession = ConversationSession()
-    result: dict[str, JsonValue] = set_roster({"players": [
+    session = ConversationSession()
+    result = set_roster({"players": [
         {"name": "Sara", "rating": 3}, {"name": " sara ", "rating": 4}, {"name": "Maya", "rating": 2},
     ]}, session)
     assert result["ok"] is False
@@ -60,16 +60,16 @@ def test_reject_duplicate_names() -> None:
 
 
 def test_keep_rosters_separate_between_sessions() -> None:
-    first: ConversationSession = ConversationSession()
-    second: ConversationSession = ConversationSession()
+    first = ConversationSession()
+    second = ConversationSession()
     set_roster(create_roster_arguments(), first)
     assert len(first.roster) == 3
     assert second.roster == ()
 
 
 def test_reject_empty_roster_without_erasing_saved_players() -> None:
-    session: ConversationSession = ConversationSession()
+    session = ConversationSession()
     set_roster(create_roster_arguments(), session)
-    result: dict[str, JsonValue] = set_roster({"players": []}, session)
+    result = set_roster({"players": []}, session)
     assert result["ok"] is False
     assert len(session.roster) == 3

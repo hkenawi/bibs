@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from src.application.session_db import ConversationSession
 
 
-definition: ToolDefinition = {
+definition = {
     "type": "function",
     "function": {
         "name": "set_roster",
@@ -43,27 +43,25 @@ def set_roster(
 ) -> dict[str, JsonValue]:
     """Replace the session roster only after validating every player."""
 
-    roster_input: RosterInput
     try:
         roster_input = RosterInput.model_validate(arguments)
     except ValidationError as error:
         return describe_validation_failure(error)
 
-    normalized_names: list[str] = [
+    normalized_names = [
         player.name.casefold() for player in roster_input.players
     ]
     if len(normalized_names) != len(set(normalized_names)):
         return create_error_result(constants.errors.INVALID_INPUT,
             "Player names must be distinct.", "Add a surname or initial to distinguish duplicate names.")
 
-    existing_ids: dict[str, str] = {
+    existing_ids = {
         player.name.casefold(): player.player_id
         for player in session.roster
     }
-    saved_players: list[RosterPlayer] = []
-    player: PlayerInput
+    saved_players = []
     for player in roster_input.players:
-        player_id: str | None = existing_ids.get(player.name.casefold())
+        player_id = existing_ids.get(player.name.casefold())
         saved_players.append(
             RosterPlayer(
                 player_id=player_id if player_id is not None else uuid4().hex,

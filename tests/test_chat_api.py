@@ -18,13 +18,13 @@ from src.configuration.constants import constants
 
 
 def test_chat_returns_required_fields_without_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
-    completion: MagicMock = MagicMock(return_value=ModelResponse(choices=[{
+    completion = MagicMock(return_value=ModelResponse(choices=[{
         "message": {"role": "assistant", "content": "Hello from the model."},
         "finish_reason": "stop",
     }]))
     monkeypatch.setattr(litellm, "completion", completion)
-    client: TestClient = TestClient(create_app())
-    response: Response = client.post("/chat", json={"message": "Hello"})
+    client = TestClient(create_app())
+    response = client.post("/chat", json={"message": "Hello"})
     assert response.status_code == 200
     assert set(response.json()) == {"response", "session_id", "tool_calls"}
     assert response.json()["session_id"]
@@ -39,20 +39,20 @@ def generate_history_response(
 
 def test_follow_up_uses_history_and_new_sessions_are_independent(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(service, "generate_response", generate_history_response)
-    client: TestClient = TestClient(create_app())
-    first: Response = client.post("/chat", json={"message": "Alice"})
-    follow_up: Response = client.post(
+    client = TestClient(create_app())
+    first = client.post("/chat", json={"message": "Alice"})
+    follow_up = client.post(
         "/chat", json={"message": "Bob", "session_id": first.json()["session_id"]}
     )
-    independent: Response = client.post("/chat", json={"message": "Charlie"})
+    independent = client.post("/chat", json={"message": "Charlie"})
     assert follow_up.json()["response"] == "Alice | Alice | Bob"
     assert follow_up.json()["session_id"] == first.json()["session_id"]
     assert independent.json()["response"] == "Charlie"
 
 
 def test_unknown_session_is_explicitly_rejected() -> None:
-    client: TestClient = TestClient(create_app())
-    response: Response = client.post(
+    client = TestClient(create_app())
+    response = client.post(
         "/chat", json={"message": "Hello", "session_id": "expired"}
     )
     assert response.status_code == 404
@@ -60,14 +60,14 @@ def test_unknown_session_is_explicitly_rejected() -> None:
 
 
 def test_local_browser_entry_and_health_are_available() -> None:
-    client: TestClient = TestClient(create_app())
+    client = TestClient(create_app())
     assert client.get("/health").json() == {"status": "ok", "model_mode": "gemini"}
-    page: Response = client.get("/")
+    page = client.get("/")
     assert page.status_code == 200
     assert "Start a" in page.text and "conversation" in page.text
     assert client.get("/static/chat.js").status_code == 200
 
 
 def test_blank_message_is_rejected() -> None:
-    client: TestClient = TestClient(create_app())
+    client = TestClient(create_app())
     assert client.post("/chat", json={"message": "   "}).status_code == 422

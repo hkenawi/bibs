@@ -32,7 +32,7 @@ class PitchSearchInput(BaseModel):
     city: str = Field(min_length=1)
 
 
-definition: ToolDefinition = {
+definition = {
     "type": "function",
     "function": {
         "name": "find_nearby_pitches",
@@ -56,13 +56,12 @@ def find_nearby_pitches(
 ) -> dict[str, JsonValue]:
     """Return up to three mapped soccer pitches without changing the session."""
 
-    location: PitchSearchInput
     try:
         location = PitchSearchInput.model_validate(arguments)
     except ValidationError as error:
         return describe_validation_failure(error)
 
-    query: str = f"""
+    query = f"""
         [out:json][timeout:20];
         area["boundary"="administrative"]
             ["name"={dumps(location.city)}]->.city;
@@ -72,9 +71,8 @@ def find_nearby_pitches(
         out tags 3;
     """
 
-    payload: object
     try:
-        response: httpx.Response = httpx.post(
+        response = httpx.post(
             "https://overpass-api.de/api/interpreter",
             data={"data": query},
             headers={"User-Agent": "bibs/0.1"},
@@ -88,19 +86,18 @@ def find_nearby_pitches(
     if not isinstance(payload, dict) or payload.get("remark"):
         return create_error_result(constants.errors.INVALID_RESPONSE, "Pitch search returned an invalid response.", "Try another area or try again later.")
 
-    elements: object = payload.get("elements")
+    elements = payload.get("elements")
     if not isinstance(elements, list):
         return create_error_result(constants.errors.INVALID_RESPONSE, "Pitch search returned no results list.", "Try again later.")
 
-    pitches: list[JsonValue] = []
-    element: object
+    pitches = []
     for element in elements:
         if not isinstance(element, dict):
             continue
 
-        element_type: object = element.get("type")
-        element_id: object = element.get("id")
-        tags: object = element.get("tags", {})
+        element_type = element.get("type")
+        element_id = element.get("id")
+        tags = element.get("tags", {})
 
         if (
             element_type not in ("node", "way", "relation")
@@ -109,7 +106,7 @@ def find_nearby_pitches(
         ):
             continue
 
-        name: object = tags.get("name")
+        name = tags.get("name")
         pitches.append({
             "name": name if isinstance(name, str) and name else "Unnamed soccer pitch",
             "map_url": f"https://www.openstreetmap.org/{element_type}/{element_id}",

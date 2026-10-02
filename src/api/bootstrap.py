@@ -23,11 +23,10 @@ def create_app(
     disable tools. Construction does not call the model.
     """
 
-    app: FastAPI = FastAPI(title="bibs")
+    app = FastAPI(title="bibs")
 
-    sessions: dict[str, ConversationSession] = {}
-    tool: ChatTool
-    tool_registry: dict[str, ChatTool] | None = (
+    sessions = {}
+    tool_registry = (
         None
         if tools is None
         else {
@@ -35,7 +34,7 @@ def create_app(
             for tool in tools
         }
     )
-    frontend: Path = Path(__file__).resolve().parents[2] / "frontend"
+    frontend = Path(__file__).resolve().parents[2] / "frontend"
 
     app.include_router(
         create_router(

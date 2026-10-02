@@ -42,4 +42,4 @@ class Constants:
     max_players: int = 22
 
 
-constants: Constants = Constants()
+constants = Constants()

@@ -23,7 +23,7 @@ from src.application.errors import create_error_result, classify_external_failur
 from src.tools.registry import TOOLS, run_tool
 from src.tools.teams.models import RosterPlayer
 
-logger: Logger = getLogger(__name__)
+logger = getLogger(__name__)
 
 
 def run_agent(
@@ -33,24 +33,23 @@ def run_agent(
     max_tool_rounds: int = constants.max_tool_rounds,
 ) -> tuple[str, list[ToolRecord]]:
     """Run a turn while preserving completed results if later work fails."""
-    tool: ChatTool
-    definitions: tuple[ToolDefinition, ...] = (
+    definitions = (
         TOOLS
         if tools is None
         else tuple(tool["definition"] for tool in tools.values())
     )
-    records: list[ToolRecord] = []
-    rounds: int = 0
+    records = []
+    rounds = 0
 
     while True:
         try:
-            reply: ChatMessage = generate_response(tuple(messages), definitions)
+            reply = generate_response(tuple(messages), definitions)
         except Exception as error:
             logger.warning("Model request failed: %s", type(error).__name__)
-            failure: dict[str, JsonValue] = classify_external_failure(error)
-            details: dict[str, JsonValue] = cast(dict[str, JsonValue], failure["error"])
-            response: str = f"{details['message']} {details['suggested_action']}"
-            successful: list[str] = [record.name for record in records if record.result.get("ok") is True]
+            failure = classify_external_failure(error)
+            details = cast(dict[str, JsonValue], failure["error"])
+            response = f"{details['message']} {details['suggested_action']}"
+            successful = [record.name for record in records if record.result.get("ok") is True]
             if successful:
                 response = "Completed: " + ", ".join(successful) + ". Any saved roster or team changes are preserved. " + response
             messages.append(ChatMessage(constants.roles.ASSISTANT, response))
@@ -66,10 +65,8 @@ def run_agent(
         if not reply.tool_calls:
             return reply.content, records
 
-        call: ToolRequest
         for call in reply.tool_calls:
-            result: dict[str, JsonValue]
-            previous_state: tuple[tuple[RosterPlayer, ...], tuple[RosterPlayer, ...], tuple[RosterPlayer, ...], bool] = (session.roster, session.home, session.away, session.dedicated_goalkeepers)
+            previous_state = (session.roster, session.home, session.away, session.dedicated_goalkeepers)
             try:
                 if call.invalid_arguments:
                     result = create_error_result(constants.errors.INVALID_INPUT,
@@ -90,7 +87,7 @@ def run_agent(
             if result.get("ok") is False:
                 session.roster, session.home, session.away, session.dedicated_goalkeepers = previous_state
 
-            record: ToolRecord = ToolRecord(
+            record = ToolRecord(
                 name=call.name,
                 args=call.arguments,
                 result=result,

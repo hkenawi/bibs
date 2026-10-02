@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from src.application.session_db import ConversationSession
 
 
-definition: ToolDefinition = {
+definition = {
     "type": "function",
     "function": {
         "name": "balance_soccer_teams",
@@ -54,18 +54,17 @@ def balance_soccer_teams(
 ) -> dict[str, JsonValue]:
     """Calculate, save, and return the best valid split of the roster."""
 
-    settings: BalanceInput
     try:
         settings = BalanceInput.model_validate(arguments)
     except ValidationError as error:
         return describe_validation_failure(error)
 
-    players: tuple[RosterPlayer, ...] = session.roster
+    players = session.roster
     if not constants.min_players <= len(players) <= constants.max_players:
         return create_error_result(constants.errors.INVALID_INPUT,
             "Teams require 3–22 players.", "Add or remove players and save the roster first.")
 
-    dedicated_goalkeepers: bool = (
+    dedicated_goalkeepers = (
         session.dedicated_goalkeepers
         if settings.dedicated_goalkeepers is None
         else settings.dedicated_goalkeepers
@@ -77,21 +76,20 @@ def balance_soccer_teams(
         return create_error_result(constants.errors.INVALID_INPUT,
             "Dedicated goalkeepers require two willing players.", "Identify another keeper or disable dedicated goalkeepers.")
 
-    home_size: int = (len(players) + 1) // 2
-    total_rating: int = sum(player.rating for player in players)
+    home_size = (len(players) + 1) // 2
+    total_rating = sum(player.rating for player in players)
 
-    best_gap: int | None = None
-    best_home: tuple[RosterPlayer, ...] = ()
-    best_away: tuple[RosterPlayer, ...] = ()
+    best_gap = None
+    best_home = ()
+    best_away = ()
 
-    home_indices: tuple[int, ...]
     for home_indices in combinations(range(len(players)), home_size):
-        home_index_set: set[int] = set(home_indices)
+        home_index_set = set(home_indices)
 
-        home: tuple[RosterPlayer, ...] = tuple(
+        home = tuple(
             players[index] for index in home_indices
         )
-        away: tuple[RosterPlayer, ...] = tuple(
+        away = tuple(
             player
             for index, player in enumerate(players)
             if index not in home_index_set
@@ -103,8 +101,8 @@ def balance_soccer_teams(
             if not any(player.goalkeeper_willing for player in away):
                 continue
 
-        home_rating: int = sum(player.rating for player in home)
-        gap: int = abs(total_rating - 2 * home_rating)
+        home_rating = sum(player.rating for player in home)
+        gap = abs(total_rating - 2 * home_rating)
 
         if best_gap is None or gap < best_gap:
             best_gap = gap

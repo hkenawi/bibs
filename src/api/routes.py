@@ -24,14 +24,14 @@ def create_router(
     frontend: Path,
     model_mode: str,
 ) -> APIRouter:
-    router: APIRouter = APIRouter()
+    router = APIRouter()
 
     def reject_request(status_code: int, code: str, message: str) -> None:
         raise HTTPException(status_code=status_code, detail={"code": code, "message": message})
 
     @router.get("/session")
     def get_session(session_id: str) -> dict[str, JsonValue]:
-        session: ConversationSession | None = sessions.get(session_id)
+        session = sessions.get(session_id)
         if session is None:
             reject_request(404, constants.errors.SESSION_EXPIRED, "This session has expired. Start again with your bench roster.")
         assert session is not None
@@ -49,11 +49,11 @@ def create_router(
 
     @router.post("/chat")
     def post_chat(request: ChatRequest) -> ChatResponse:
-        session_id: str = request.session_id or uuid4().hex
+        session_id = request.session_id or uuid4().hex
         if request.session_id is not None and session_id not in sessions:
             reject_request(404, constants.errors.SESSION_EXPIRED, "This session has expired. Start again with your bench roster.")
-        session: ConversationSession = sessions.setdefault(session_id, ConversationSession())
-        messages: list[ChatMessage] = list(session.messages)
+        session = sessions.setdefault(session_id, ConversationSession())
+        messages = list(session.messages)
         messages.append(
             ChatMessage(
                 role=constants.roles.USER,
@@ -61,8 +61,6 @@ def create_router(
             )
         )
 
-        response: str
-        tool_calls: list[ToolRecord]
         response, tool_calls = run_agent(
             messages=messages,
             session=session,

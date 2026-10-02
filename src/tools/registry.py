@@ -18,19 +18,13 @@ from src.tools.teams import balance, roster
 
 # TODO: Consider registering the rebalance tool once its behavior is implemented.
 # TODO: Consider registering the compare tool once its behavior is implemented.
-TOOLS: tuple[ToolDefinition, ...] = (
+TOOLS = (
     roster.definition,
     balance.definition,
     search.definition,
 )
 
-HANDLERS: dict[
-    str,
-    Callable[
-        [dict[str, JsonValue], ConversationSession],
-        dict[str, JsonValue],
-    ],
-] = {
+HANDLERS = {
     roster.definition["function"]["name"]: roster.set_roster,
     balance.definition["function"]["name"]: balance.balance_soccer_teams,
     search.definition["function"]["name"]: search.find_nearby_pitches,

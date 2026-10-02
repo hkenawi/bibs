@@ -11,7 +11,7 @@ from src.tools.teams.models import PlayerInput, RosterPlayer
 
 
 def test_validate_player_and_trim_name() -> None:
-    player: PlayerInput = PlayerInput(name=" Ahmed ", rating=4)
+    player = PlayerInput(name=" Ahmed ", rating=4)
 
     assert player.name == "Ahmed"
     assert player.rating == 4
@@ -19,7 +19,7 @@ def test_validate_player_and_trim_name() -> None:
 
 
 def test_accept_willing_goalkeeper() -> None:
-    player: PlayerInput = PlayerInput(
+    player = PlayerInput(
         name="Sara",
         rating=3,
         goalkeeper_willing=True,
@@ -49,7 +49,7 @@ def test_reject_blank_name() -> None:
 
 
 def test_preserve_server_assigned_id() -> None:
-    player: RosterPlayer = RosterPlayer(
+    player = RosterPlayer(
         player_id="p1",
         name="Ahmed",
         rating=4,
