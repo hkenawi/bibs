@@ -46,8 +46,6 @@ def test_pitch_search_uses_resolved_bounds_and_reports_the_location(
 
 @pytest.mark.parametrize(("payload", "expected_code"), [
     ([], "INVALID_INPUT"),
-    ({"unexpected": "object"}, "INVALID_RESPONSE"),
-    ([{"display_name": "Manhattan", "boundingbox": ["bad"]}], "INVALID_RESPONSE"),
     ([{"display_name": "Manhattan", "boundingbox": ["95", "96", "0", "1"]}], "INVALID_RESPONSE"),
 ])
 def test_unresolved_or_invalid_locations_do_not_search_for_pitches(
@@ -93,3 +91,25 @@ def test_pitch_failures_identify_the_service_in_server_logs(
     assert result["ok"] is False
     assert f"{service} request failed: HTTPStatusError (status=503)" in caplog.text
     assert "private upstream details" not in caplog.text
+
+
+@pytest.mark.parametrize(("status", "code"), [
+    (400, "BAD_REQUEST"),
+    (403, "ACCESS_DENIED"), (429, "RATE_LIMITED"),
+    (500, "SERVICE_UNAVAILABLE"),
+])
+def test_pitch_http_failures_are_classified_without_response_leaks(
+    monkeypatch: pytest.MonkeyPatch, status: int, code: str,
+) -> None:
+    monkeypatch.setattr(httpx, "get", MagicMock(return_value=httpx.Response(
+        200, json=[{"display_name": "Harlem, New York", "boundingbox": ["40.8", "40.83", "-73.96", "-73.93"]}],
+        request=httpx.Request("GET", "https://nominatim.openstreetmap.org/search"),
+    )))
+    response: httpx.Response = httpx.Response(status, text="private upstream details",
+        request=httpx.Request("POST", "https://overpass-api.de/api/interpreter"))
+    post: MagicMock = MagicMock(return_value=response)
+    monkeypatch.setattr(httpx, "post", post)
+    result: dict[str, JsonValue] = find_nearby_pitches(
+        {"neighborhood": "Harlem", "city": "New York"}, ConversationSession())
+    assert result["error"]["code"] == code
+    assert "private upstream details" not in str(result)

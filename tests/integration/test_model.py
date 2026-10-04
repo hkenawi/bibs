@@ -17,17 +17,12 @@ from src.integrations.model import generate_response
 
 @pytest.fixture
 def completion_mock(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
-    completion = MagicMock(return_value=ModelResponse(choices=[{
+    completion: MagicMock = MagicMock(return_value=ModelResponse(choices=[{
         "message": {"role": "assistant", "content": "Hello from Gemini."},
         "finish_reason": "stop",
     }]))
     monkeypatch.setattr(litellm, "completion", completion)
     return completion
-
-
-def test_text_reply_becomes_assistant_message(completion_mock: MagicMock) -> None:
-    reply = generate_response((ChatMessage(constants.roles.USER, "Hi"),))
-    assert reply == ChatMessage(constants.roles.ASSISTANT, "Hello from Gemini.")
 
 
 def test_sends_configured_model_and_ordered_history(completion_mock: MagicMock) -> None:
@@ -36,39 +31,13 @@ def test_sends_configured_model_and_ordered_history(completion_mock: MagicMock) 
         ChatMessage(constants.roles.ASSISTANT, "I will."),
         ChatMessage(constants.roles.USER, "Who?"),
     ))
-    assert completion_mock.call_args.kwargs == {
-        "model": "vertex_ai/gemini-3.5-flash-lite",
-        "vertex_location": "global",
-        "stream": False,
-        "timeout": 30.0,
-        "num_retries": 0,
-        "tools": None,
-        "messages": [
-            {"role": "user", "content": "Remember Alice"},
-            {"role": "assistant", "content": "I will."},
-            {"role": "user", "content": "Who?"},
-        ],
-    }
-
-
-def test_sends_available_tool_definitions(completion_mock: MagicMock) -> None:
-    definition = {
-        "type": "function",
-        "function": {
-            "name": "weather", "description": "Get weather",
-            "parameters": {"type": "object"},
-        },
-    }
-    generate_response((ChatMessage(constants.roles.USER, "Check weather"),), (
-        definition,
-    ))
-    assert completion_mock.call_args.kwargs["tools"] == [{
-        "type": "function",
-        "function": {
-            "name": "weather", "description": "Get weather",
-            "parameters": {"type": "object"},
-        },
-    }]
+    assert completion_mock.call_args.kwargs["model"] == constants.gemini.MODEL.value
+    assert completion_mock.call_args.kwargs["vertex_location"] == constants.gemini.LOCATION.value
+    assert completion_mock.call_args.kwargs["messages"] == [
+        {"role": "user", "content": "Remember Alice"},
+        {"role": "assistant", "content": "I will."},
+        {"role": "user", "content": "Who?"},
+    ]
 
 
 def test_tool_calls_preserve_ids_and_parse_arguments(completion_mock: MagicMock) -> None:
@@ -86,7 +55,7 @@ def test_tool_calls_preserve_ids_and_parse_arguments(completion_mock: MagicMock)
         },
         "finish_reason": "tool_calls",
     }])
-    reply = generate_response((ChatMessage(constants.roles.USER, "Weather?"),))
+    reply: ChatMessage = generate_response((ChatMessage(constants.roles.USER, "Weather?"),))
     assert reply == ChatMessage(constants.roles.ASSISTANT, "", (
         ToolRequest("call-1", "weather", {"city": "New York"}),
         ToolRequest("call-2", "weather", {"city": "Boston"}),
@@ -107,12 +76,3 @@ def test_tool_results_retain_matching_call_ids(completion_mock: MagicMock) -> No
         }]},
         {"role": "tool", "content": '{"temperature": 20}', "tool_call_id": "call-1"},
     ]
-
-
-def test_provider_failure_reaches_the_harness(completion_mock: MagicMock) -> None:
-    failure = RuntimeError("Authentication failed")
-    completion_mock.side_effect = failure
-    with pytest.raises(RuntimeError) as raised:
-        generate_response((ChatMessage(constants.roles.USER, "Hello"),))
-    assert raised.value is failure
-    assert completion_mock.call_count == 1

@@ -38,7 +38,10 @@ bibs/
 │       ├── teams/          # Player models, roster saving, and team balancing
 │       └── pitches/        # OpenStreetMap pitch search
 ├── frontend/               # Browser chat HTML, CSS, and JavaScript
-├── tests/                  # Unit and integration tests
+├── tests/
+│   ├── unit/               # Domain logic and agent-loop guardrails
+│   ├── integration/        # External-service adapters, with controlled responses
+│   └── e2e/                # Complete backend flows through the HTTP API
 ├── pyproject.toml          # Python dependencies and project configuration
 ├── uv.lock                 # Locked dependency versions
 └── submission.json         # Assignment submission metadata
@@ -83,3 +86,17 @@ Each query can be pasted into a fresh chat session.
    teams with a willing goalkeeper on each team.”
 3. **Find pitches:** “Find up to three soccer pitches in Harlem, New York City.
    Show their map links.”
+
+## Tests
+
+Run all tests with `uv run pytest`. To run one category, use
+`uv run pytest tests/unit`, `uv run pytest tests/integration`, or
+`uv run pytest tests/e2e`.
+
+Unit tests protect roster changes, team balancing, and agent-loop guardrails.
+Integration tests exercise the Gemini, Nominatim, and Overpass adapters with
+controlled external responses. End-to-end tests exercise complete backend
+flows through `/chat` and `/session`, including roster corrections, pitch
+search, and recovery from provider failures. They mock only external services;
+they do not exercise browser interactions or live service availability. No
+credentials or network access are required.

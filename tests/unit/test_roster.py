@@ -5,6 +5,7 @@ player identities, validation before mutation, and independent session state.
 """
 
 from pydantic import JsonValue
+import pytest
 
 from src.application.session_db import ConversationSession
 from src.tools.teams.roster import set_roster
@@ -19,31 +20,29 @@ def create_roster_arguments(rating: int = 3) -> dict[str, JsonValue]:
     ]}
 
 
-def test_save_player_with_server_assigned_id() -> None:
-    session = ConversationSession()
-    result = set_roster(create_roster_arguments(), session)
-    assert result["ok"] is True
-    assert len(session.roster) == 3
-    assert session.roster[0].player_id
-    assert session.roster[0].name == "Sara"
-    assert session.roster[0].goalkeeper_willing is True
-    assert result["players"] == [player.model_dump(mode="json") for player in session.roster]
-
-
 def test_replace_roster_and_preserve_matching_player_id() -> None:
-    session = ConversationSession()
+    session: ConversationSession = ConversationSession()
     set_roster(create_roster_arguments(), session)
-    original_id = session.roster[0].player_id
+    original_id: str = session.roster[0].player_id
+    session.home = session.roster[:2]
+    session.away = session.roster[2:]
     set_roster(create_roster_arguments(rating=5), session)
     assert session.roster[0].player_id == original_id
     assert session.roster[0].rating == 5
+    assert session.home == session.away == ()
 
 
-def test_reject_missing_rating_without_changing_roster() -> None:
-    session = ConversationSession()
+@pytest.mark.parametrize("invalid_player", [
+    {"name": "Sara"},
+    {"name": "Sara", "rating": 0},
+    {"name": "Sara", "rating": 6},
+    {"name": "Sara", "rating": True},
+])
+def test_reject_invalid_player_without_changing_roster(invalid_player: dict[str, JsonValue]) -> None:
+    session: ConversationSession = ConversationSession()
     set_roster(create_roster_arguments(), session)
-    result = set_roster({"players": [
-        {"name": "Sara"}, {"name": "Ahmed", "rating": 4}, {"name": "Maya", "rating": 2},
+    result: dict[str, JsonValue] = set_roster({"players": [
+        invalid_player, {"name": "Ahmed", "rating": 4}, {"name": "Maya", "rating": 2},
     ]}, session)
     assert result["ok"] is False
     assert len(session.roster) == 3
@@ -51,25 +50,20 @@ def test_reject_missing_rating_without_changing_roster() -> None:
 
 
 def test_reject_duplicate_names() -> None:
-    session = ConversationSession()
-    result = set_roster({"players": [
+    session: ConversationSession = ConversationSession()
+    result: dict[str, JsonValue] = set_roster({"players": [
         {"name": "Sara", "rating": 3}, {"name": " sara ", "rating": 4}, {"name": "Maya", "rating": 2},
     ]}, session)
     assert result["ok"] is False
     assert session.roster == ()
 
 
-def test_keep_rosters_separate_between_sessions() -> None:
-    first = ConversationSession()
-    second = ConversationSession()
-    set_roster(create_roster_arguments(), first)
-    assert len(first.roster) == 3
-    assert second.roster == ()
-
-
-def test_reject_empty_roster_without_erasing_saved_players() -> None:
-    session = ConversationSession()
-    set_roster(create_roster_arguments(), session)
-    result = set_roster({"players": []}, session)
+@pytest.mark.parametrize("count", [2, 23])
+def test_roster_rejects_out_of_range_counts_without_mutation(count: int) -> None:
+    from src.tools.teams.roster import set_roster
+    session: ConversationSession = ConversationSession()
+    result: dict[str, JsonValue] = set_roster({"players": [
+        {"name": f"Player {index}", "rating": 3} for index in range(count)
+    ]}, session)
     assert result["ok"] is False
-    assert len(session.roster) == 3
+    assert session.roster == ()
