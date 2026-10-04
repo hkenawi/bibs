@@ -22,6 +22,10 @@ from src.tools.pitches.search import find_nearby_pitches
 def test_pitch_http_failures_are_classified_without_response_leaks(
     monkeypatch: pytest.MonkeyPatch, status: int, code: str, attempts: int,
 ) -> None:
+    monkeypatch.setattr(httpx, "get", MagicMock(return_value=httpx.Response(
+        200, json=[{"display_name": "Harlem, New York", "boundingbox": ["40.8", "40.83", "-73.96", "-73.93"]}],
+        request=httpx.Request("GET", "https://nominatim.openstreetmap.org/search"),
+    )))
     response = httpx.Response(status, text="private upstream details",
         request=httpx.Request("POST", "https://overpass-api.de/api/interpreter"))
     post = MagicMock(return_value=response)
@@ -105,5 +109,4 @@ def test_saved_roster_and_tool_records_survive_a_later_model_failure(monkeypatch
     restored = client.get("/session", params={"session_id": response.json()["session_id"]})
     assert len(restored.json()["state"]["roster"]) == 3
     assert restored.json()["turns"][0]["tool_calls"] == response.json()["tool_calls"]
-
 

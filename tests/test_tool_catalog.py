@@ -57,6 +57,10 @@ def test_pitch_search_call_is_recorded_and_returned_to_model(
     monkeypatch: pytest.MonkeyPatch, tool_name: str, arguments: dict[str, JsonValue],
 ) -> None:
     """A pitch search result is recorded and returned to the model."""
+    monkeypatch.setattr(httpx, "get", MagicMock(return_value=Response(
+        200, json=[{"display_name": "Harlem, New York", "boundingbox": ["40.8", "40.83", "-73.96", "-73.93"]}],
+        request=Request("GET", "https://nominatim.openstreetmap.org/search"),
+    )))
     search_response = Response(
         200, json={"elements": []},
         request=Request("POST", "https://overpass-api.de/api/interpreter"),

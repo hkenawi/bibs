@@ -16,7 +16,9 @@ Google Cloud Vertex AI. It saves rosters of 3–22 players with skill ratings fr
 1 to 5, splits them into two teams with nearly equal sizes and the smallest total
 rating difference, and optionally places a willing goalkeeper on each team.
 It also searches OpenStreetMap for up to three soccer pitches in a named
-neighborhood and city, returning map links.
+neighborhood and city, returning map links. Nominatim resolves the location
+first, then Overpass searches its bounding box, which may include nearby areas
+outside the named boundary. Results include the resolved place name.
 
 The browser chat displays the conversation, roster, teams, and tool results.
 Conversation and team state are stored in memory and disappear when the server

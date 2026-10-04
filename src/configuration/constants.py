@@ -32,11 +32,19 @@ class GeminiSetting(StrEnum):
     MODE = "gemini"
 
 
+class PitchServiceSetting(StrEnum):
+    NOMINATIM = "https://nominatim.openstreetmap.org/search"
+    OVERPASS = "https://overpass-api.de/api/interpreter"
+    USER_AGENT = "bibs/0.1"
+    FAILURE_LOG = "%s request failed: %s (status=%s)"
+
+
 @dataclass(frozen=True)
 class Constants:
     roles: type[MessageRole] = MessageRole
     errors: type[ErrorCode] = ErrorCode
     gemini: type[GeminiSetting] = GeminiSetting
+    pitches: type[PitchServiceSetting] = PitchServiceSetting
     max_tool_rounds: int = 4
     min_players: int = 3
     max_players: int = 22
