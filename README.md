@@ -1,28 +1,26 @@
+# bibs
+
 ## Table of contents
 
 - [Project description](#project-description)
+- [Tools](#tools)
 - [Repository layout](#repository-layout)
 - [Run locally](#run-locally)
 - [Sample queries](#sample-queries)
 
 ## Project description
 
-# bibs
+bibs is a conversational soccer organizer that saves rosters of 3–22 players 
+with skill ratings from1 to 5, splits them into two teams with nearly equal 
+sizes and the smallest totalrating difference, and optionally places a willing 
+goalkeeper on each team. It also searches for up to three soccer pitches in a 
+named neighborhood and city, returning map links. 
 
-**Fair teams. More football.**
+## Tools
 
-bibs is a conversational soccer organizer powered by Gemini through LiteLLM and
-Google Cloud Vertex AI. It saves rosters of 3–22 players with skill ratings from
-1 to 5, splits them into two teams with nearly equal sizes and the smallest total
-rating difference, and optionally places a willing goalkeeper on each team.
-It also searches OpenStreetMap for up to three soccer pitches in a named
-neighborhood and city, returning map links. Nominatim resolves the location
-first, then Overpass searches its bounding box, which may include nearby areas
-outside the named boundary. Results include the resolved place name.
-
-The browser chat displays the conversation, roster, teams, and tool results.
-Conversation and team state are stored in memory and disappear when the server
-restarts.
+- **`set_roster`** — Saves player names, skill ratings, and goalkeeper preferences for the current session.
+- **`balance_soccer_teams`** — Splits the saved roster into balanced teams, optionally assigning a willing goalkeeper to each.
+- **`find_nearby_pitches`** — Searches a neighborhood and city for up to three mapped soccer pitches and returns their OpenStreetMap links.
 
 ## Repository layout
 
@@ -49,9 +47,9 @@ bibs/
 
 ## Run locally
 
-Prerequisites: Python 3.12+, `uv`, and the Google Cloud CLI (`gcloud`). Use a Google
-Cloud project with billing and the Vertex AI API enabled, and credentials with
-permission to access the configured Gemini model.
+Prerequisites: Python 3.12+, `uv`, and the Google Cloud CLI (`gcloud`). 
+Use a Google Cloud project with the Vertex AI API enabled, and credentials 
+with permission to access the configured Gemini model.
 
 From the repository root:
 
@@ -86,17 +84,3 @@ Each query can be pasted into a fresh chat session.
    teams with a willing goalkeeper on each team.”
 3. **Find pitches:** “Find up to three soccer pitches in Harlem, New York City.
    Show their map links.”
-
-## Tests
-
-Run all tests with `uv run pytest`. To run one category, use
-`uv run pytest tests/unit`, `uv run pytest tests/integration`, or
-`uv run pytest tests/e2e`.
-
-Unit tests protect roster changes, team balancing, and agent-loop guardrails.
-Integration tests exercise the Gemini, Nominatim, and Overpass adapters with
-controlled external responses. End-to-end tests exercise complete backend
-flows through `/chat` and `/session`, including roster corrections, pitch
-search, and recovery from provider failures. They mock only external services;
-they do not exercise browser interactions or live service availability. No
-credentials or network access are required.
