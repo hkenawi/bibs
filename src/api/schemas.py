@@ -3,13 +3,21 @@
 These Pydantic models belong to the transport boundary, independently of provider
 payloads. Strict inputs reject accidental coercion and unexpected fields."""
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+)
 
 from src.application.models import ToolRecord
 
 
 class ChatRequest(BaseModel):
-    model_config: ConfigDict = ConfigDict(extra="forbid", strict=True, str_strip_whitespace=True)
+    model_config: ConfigDict = ConfigDict(
+        extra="forbid",
+        strict=True,
+        str_strip_whitespace=True,
+    )
     message: str = Field(min_length=1, max_length=10000)
     session_id: str | None = Field(default=None, min_length=1)
 

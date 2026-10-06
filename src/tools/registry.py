@@ -1,20 +1,17 @@
 """Collect tool schemas and dispatch model-requested calls.
 
 Schemas are sent to the model. Execution stays in Python, where the
-current session is supplied explicitly to tools that need stored data.
-"""
-
-from collections.abc import Callable
+current session is supplied explicitly to tools that need stored data."""
 
 from pydantic import JsonValue
+from collections.abc import Callable
 
-from src.application.models import ToolDefinition
-from src.application.session_db import ConversationSession
-from src.application.errors import create_error_result
-from src.configuration.constants import constants
 from src.tools.pitches import search
 from src.tools.teams import balance, roster
-
+from src.application.models import ToolDefinition
+from src.configuration.constants import constants
+from src.application.errors import create_error_result
+from src.application.session_db import ConversationSession
 
 # TODO: Consider registering the rebalance tool once its behavior is implemented.
 # TODO: Consider registering the compare tool once its behavior is implemented.
@@ -39,6 +36,9 @@ def run_tool(
     """Execute the requested tool with the current conversation session."""
 
     if name not in HANDLERS:
-        return create_error_result(constants.errors.UNKNOWN_TOOL,
-            "This tool is not available.", "Choose a registered tool.")
+        return create_error_result(
+            constants.errors.UNKNOWN_TOOL,
+            "This tool is not available.",
+            "Choose a registered tool.",
+        )
     return HANDLERS[name](arguments, session)

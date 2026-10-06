@@ -3,8 +3,8 @@
 The application uses this object for message roles, error codes, and its tool
 round limit. Values are defined in code without environment loading."""
 
-from dataclasses import dataclass
 from enum import StrEnum
+from dataclasses import dataclass
 
 
 class MessageRole(StrEnum):

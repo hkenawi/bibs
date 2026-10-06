@@ -1,18 +1,23 @@
 """Validate and save the complete player roster for one session.
 
 The tool accepts structured player data extracted from chat. Validation
-finishes before session mutation. Player IDs are generated locally.
-"""
+finishes before session mutation. Player IDs are generated locally."""
 
-from typing import TYPE_CHECKING, cast
 from uuid import uuid4
-
+from typing import TYPE_CHECKING, cast
 from pydantic import JsonValue, ValidationError
 
 from src.application.models import ToolDefinition
-from src.application.errors import create_error_result, describe_validation_failure
 from src.configuration.constants import constants
-from src.tools.teams.models import PlayerInput, RosterInput, RosterPlayer
+from src.tools.teams.models import (
+    PlayerInput,
+    RosterInput,
+    RosterPlayer,
+)
+from src.application.errors import (
+    create_error_result,
+    describe_validation_failure,
+)
 
 if TYPE_CHECKING:
     from src.application.session_db import ConversationSession
@@ -48,16 +53,16 @@ def set_roster(
     except ValidationError as error:
         return describe_validation_failure(error)
 
-    normalized_names = [
-        player.name.casefold() for player in roster_input.players
-    ]
+    normalized_names = [player.name.casefold() for player in roster_input.players]
     if len(normalized_names) != len(set(normalized_names)):
-        return create_error_result(constants.errors.INVALID_INPUT,
-            "Player names must be distinct.", "Add a surname or initial to distinguish duplicate names.")
+        return create_error_result(
+            constants.errors.INVALID_INPUT,
+            "Player names must be distinct.",
+            "Add a surname or initial to distinguish duplicate names.",
+        )
 
     existing_ids = {
-        player.name.casefold(): player.player_id
-        for player in session.roster
+        player.name.casefold(): player.player_id for player in session.roster
     }
     saved_players = []
     for player in roster_input.players:
@@ -77,7 +82,5 @@ def set_roster(
 
     return {
         "ok": True,
-        "players": [
-            player.model_dump(mode="json") for player in session.roster
-        ],
+        "players": [player.model_dump(mode="json") for player in session.roster],
     }

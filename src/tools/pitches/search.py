@@ -3,20 +3,31 @@
 This tool resolves locations with Nominatim, queries their bounding boxes
 through Overpass, and returns up to three mapped pitches. Bounds may include
 nearby areas outside a named boundary. It does not rank distances or mutate
-session state.
-"""
-
-from typing import TYPE_CHECKING, cast
-from logging import Logger, getLogger
+session state."""
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
+
+from logging import Logger, getLogger
+from typing import TYPE_CHECKING, cast
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    ValidationError,
+)
 
 from src.application.models import ToolDefinition
-from src.application.errors import create_error_result, describe_validation_failure
 from src.configuration.constants import constants
 from src.application.errors import classify_external_failure
-from src.tools.pitches.location import ResolvedPitchLocation, resolve_pitch_search_location
+from src.application.errors import (
+    create_error_result,
+    describe_validation_failure,
+)
+from src.tools.pitches.location import (
+    ResolvedPitchLocation,
+    resolve_pitch_search_location,
+)
 
 if TYPE_CHECKING:
     from src.application.session_db import ConversationSession
@@ -70,12 +81,19 @@ def find_nearby_pitches(
 
     try:
         resolved: ResolvedPitchLocation | None = resolve_pitch_search_location(
-            location.neighborhood, location.city,
+            location.neighborhood,
+            location.city,
         )
     except (httpx.HTTPError, ValueError) as error:
         logger.warning(
-            constants.pitches.FAILURE_LOG.value, "Nominatim", type(error).__name__,
-            error.response.status_code if isinstance(error, httpx.HTTPStatusError) else None,
+            constants.pitches.FAILURE_LOG.value,
+            "Nominatim",
+            type(error).__name__,
+            (
+                error.response.status_code
+                if isinstance(error, httpx.HTTPStatusError)
+                else None
+            ),
         )
         return classify_external_failure(error)
 
@@ -104,17 +122,31 @@ def find_nearby_pitches(
         payload: object = cast(object, response.json())
     except (httpx.HTTPError, ValueError) as error:
         logger.warning(
-            constants.pitches.FAILURE_LOG.value, "Overpass", type(error).__name__,
-            error.response.status_code if isinstance(error, httpx.HTTPStatusError) else None,
+            constants.pitches.FAILURE_LOG.value,
+            "Overpass",
+            type(error).__name__,
+            (
+                error.response.status_code
+                if isinstance(error, httpx.HTTPStatusError)
+                else None
+            ),
         )
         return classify_external_failure(error)
 
     if not isinstance(payload, dict) or payload.get("remark"):
-        return create_error_result(constants.errors.INVALID_RESPONSE, "Pitch search returned an invalid response.", "Try another area or try again later.")
+        return create_error_result(
+            constants.errors.INVALID_RESPONSE,
+            "Pitch search returned an invalid response.",
+            "Try another area or try again later.",
+        )
 
     elements: object = payload.get("elements")
     if not isinstance(elements, list):
-        return create_error_result(constants.errors.INVALID_RESPONSE, "Pitch search returned no results list.", "Try again later.")
+        return create_error_result(
+            constants.errors.INVALID_RESPONSE,
+            "Pitch search returned no results list.",
+            "Try again later.",
+        )
 
     pitches: list[JsonValue] = []
     element: object
@@ -134,10 +166,14 @@ def find_nearby_pitches(
             continue
 
         name: object = tags.get("name")
-        pitches.append({
-            "name": name if isinstance(name, str) and name else "Unnamed soccer pitch",
-            "map_url": f"https://www.openstreetmap.org/{element_type}/{element_id}",
-        })
+        pitches.append(
+            {
+                "name": (
+                    name if isinstance(name, str) and name else "Unnamed soccer pitch"
+                ),
+                "map_url": f"https://www.openstreetmap.org/{element_type}/{element_id}",
+            }
+        )
 
         if len(pitches) == 3:
             break

@@ -1,4 +1,3 @@
 """Group soccer and pitch tools.
 
-Tool descriptions and execution dispatch live in registry.py.
-"""
+Tool descriptions and execution dispatch live in registry.py."""

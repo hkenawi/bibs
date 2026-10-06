@@ -4,14 +4,13 @@ Each application receives its own session dictionary and tool registry.
 This module connects sessions, routes, and frontend assets without starting a server."""
 
 from pathlib import Path
-
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from src.api.routes import create_router
 from src.application.models import ChatTool
-from src.application.session_db import ConversationSession
 from src.configuration.constants import constants
+from src.application.session_db import ConversationSession
 
 
 def create_app(
@@ -20,8 +19,7 @@ def create_app(
     """Build an app with isolated sessions and optional custom tools.
 
     Omit tools to use the standard registry. Pass an empty tuple to
-    disable tools. Construction does not call the model.
-    """
+    disable tools. Construction does not call the model."""
 
     app = FastAPI(title="bibs")
 
@@ -29,10 +27,7 @@ def create_app(
     tool_registry = (
         None
         if tools is None
-        else {
-            tool["definition"]["function"]["name"]: tool
-            for tool in tools
-        }
+        else {tool["definition"]["function"]["name"]: tool for tool in tools}
     )
     frontend = Path(__file__).resolve().parents[2] / "frontend"
 
@@ -44,6 +39,10 @@ def create_app(
             model_mode=constants.gemini.MODE.value,
         )
     )
-    app.mount("/static", StaticFiles(directory=frontend), name="static")
+    app.mount(
+        "/static",
+        StaticFiles(directory=frontend),
+        name="static",
+    )
 
     return app

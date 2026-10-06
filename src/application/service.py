@@ -4,11 +4,19 @@ The caller supplies history containing the latest user message and manages
 session storage. This function appends assistant messages and tool results."""
 
 from json import dumps
-from logging import getLogger, Logger
 from typing import cast
-
 from pydantic import JsonValue
+from logging import getLogger, Logger
 
+from src.tools.registry import TOOLS, run_tool
+from src.tools.teams.models import RosterPlayer
+from src.configuration.constants import constants
+from src.integrations.model import generate_response
+from src.application.session_db import ConversationSession
+from src.application.errors import (
+    create_error_result,
+    classify_external_failure,
+)
 from src.application.models import (
     ChatMessage,
     ChatTool,
@@ -16,12 +24,6 @@ from src.application.models import (
     ToolRecord,
     ToolRequest,
 )
-from src.configuration.constants import constants
-from src.integrations.model import generate_response
-from src.application.session_db import ConversationSession
-from src.application.errors import create_error_result, classify_external_failure
-from src.tools.registry import TOOLS, run_tool
-from src.tools.teams.models import RosterPlayer
 
 logger = getLogger(__name__)
 
@@ -34,9 +36,7 @@ def run_agent(
 ) -> tuple[str, list[ToolRecord]]:
     """Run a turn while preserving completed results if later work fails."""
     definitions = (
-        TOOLS
-        if tools is None
-        else tuple(tool["definition"] for tool in tools.values())
+        TOOLS if tools is None else tuple(tool["definition"] for tool in tools.values())
     )
     records = []
     rounds = 0
@@ -45,13 +45,23 @@ def run_agent(
         try:
             reply = generate_response(tuple(messages), definitions)
         except Exception as error:
-            logger.warning("Model request failed: %s", type(error).__name__)
+            logger.warning(
+                "Model request failed: %s",
+                type(error).__name__,
+            )
             failure = classify_external_failure(error)
             details = cast(dict[str, JsonValue], failure["error"])
             response = f"{details['message']} {details['suggested_action']}"
-            successful = [record.name for record in records if record.result.get("ok") is True]
+            successful = [
+                record.name for record in records if record.result.get("ok") is True
+            ]
             if successful:
-                response = "Completed: " + ", ".join(successful) + ". Any saved roster or team changes are preserved. " + response
+                response = (
+                    "Completed: "
+                    + ", ".join(successful)
+                    + ". Any saved roster or team changes are preserved. "
+                    + response
+                )
             messages.append(ChatMessage(constants.roles.ASSISTANT, response))
             return response, records
 
@@ -66,26 +76,53 @@ def run_agent(
             return reply.content, records
 
         for call in reply.tool_calls:
-            previous_state = (session.roster, session.home, session.away, session.dedicated_goalkeepers)
+            previous_state = (
+                session.roster,
+                session.home,
+                session.away,
+                session.dedicated_goalkeepers,
+            )
             try:
                 if call.invalid_arguments:
-                    result = create_error_result(constants.errors.INVALID_INPUT,
-                        "Tool arguments must be a valid JSON object.", "Correct the arguments and call the tool again.")
+                    result = create_error_result(
+                        constants.errors.INVALID_INPUT,
+                        "Tool arguments must be a valid JSON object.",
+                        "Correct the arguments and call the tool again.",
+                    )
                 elif tools is None:
-                    result = run_tool(call.name, call.arguments, session)
+                    result = run_tool(
+                        call.name,
+                        call.arguments,
+                        session,
+                    )
                 elif call.name in tools:
                     result = tools[call.name]["handler"](call.arguments)
                 else:
-                    result = create_error_result(constants.errors.UNKNOWN_TOOL,
-                        "This tool is not available.", "Choose a registered tool.")
+                    result = create_error_result(
+                        constants.errors.UNKNOWN_TOOL,
+                        "This tool is not available.",
+                        "Choose a registered tool.",
+                    )
                 if not isinstance(result, dict):
                     raise ValueError("Invalid tool result")
             except Exception as error:
-                logger.warning("Tool %s failed: %s", call.name, type(error).__name__)
-                result = create_error_result(constants.errors.TOOL_FAILED,
-                    "The tool could not complete its operation.", "Try again or change the request.")
+                logger.warning(
+                    "Tool %s failed: %s",
+                    call.name,
+                    type(error).__name__,
+                )
+                result = create_error_result(
+                    constants.errors.TOOL_FAILED,
+                    "The tool could not complete its operation.",
+                    "Try again or change the request.",
+                )
             if result.get("ok") is False:
-                session.roster, session.home, session.away, session.dedicated_goalkeepers = previous_state
+                (
+                    session.roster,
+                    session.home,
+                    session.away,
+                    session.dedicated_goalkeepers,
+                ) = previous_state
 
             record = ToolRecord(
                 name=call.name,

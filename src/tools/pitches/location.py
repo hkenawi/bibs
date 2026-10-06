@@ -3,6 +3,7 @@
 This adapter reads Nominatim's address search API and validates its response.
 It owns geographic bounds, while the search module owns Overpass retrieval
 and public error formatting. HTTP and validation failures propagate to it."""
+
 import httpx
 
 from typing import cast
@@ -32,13 +33,18 @@ class ResolvedPitchLocation:
 
 
 def resolve_pitch_search_location(
-    neighborhood: str, city: str,
+    neighborhood: str,
+    city: str,
 ) -> ResolvedPitchLocation | None:
     """Resolve a place description, returning None for an empty search."""
     response: httpx.Response = httpx.get(
         constants.pitches.NOMINATIM.value,
-        params={"q": f"{neighborhood}, {city}", "format": "jsonv2",
-                "layer": "address", "limit": 1},
+        params={
+            "q": f"{neighborhood}, {city}",
+            "format": "jsonv2",
+            "layer": "address",
+            "limit": 1,
+        },
         headers={"User-Agent": constants.pitches.USER_AGENT.value},
         timeout=15.0,
     )
@@ -48,7 +54,9 @@ def resolve_pitch_search_location(
         raise ValueError("Invalid geocoding results list.")
     if not payload:
         return None
-    match: NominatimLocationResponse = NominatimLocationResponse.model_validate(payload[0])
+    match: NominatimLocationResponse = NominatimLocationResponse.model_validate(
+        payload[0]
+    )
     south: float
     north: float
     west: float
@@ -58,4 +66,10 @@ def resolve_pitch_search_location(
         -90 <= south <= north <= 90 and -180 <= west <= east <= 180
     ):
         raise ValueError("Invalid geocoding bounds or place name.")
-    return ResolvedPitchLocation(match.display_name, south, north, west, east)
+    return ResolvedPitchLocation(
+        match.display_name,
+        south,
+        north,
+        west,
+        east,
+    )

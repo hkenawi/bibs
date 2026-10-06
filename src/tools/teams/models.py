@@ -1,10 +1,14 @@
 """Define player data used by roster and team tools.
 
 These models validate structured player data extracted from chat.
-They do not access the model provider or mutate session state.
-"""
+They do not access the model provider or mutate session state."""
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+)
+
 from src.configuration.constants import constants
 
 
@@ -37,7 +41,10 @@ class RosterInput(BaseModel):
         extra="forbid",
     )
 
-    players: list[PlayerInput] = Field(min_length=constants.min_players, max_length=constants.max_players)
+    players: list[PlayerInput] = Field(
+        min_length=constants.min_players,
+        max_length=constants.max_players,
+    )
 
 
 class BalanceInput(BaseModel):

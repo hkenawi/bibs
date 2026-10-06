@@ -2,14 +2,16 @@
 
 Each application owns its session dictionary. Messages and players are
 lost when the server restarts. Completed responses are retained for refresh restoration.
-Concurrent changes to the same session are not coordinated.
-"""
+Concurrent changes to the same session are not coordinated."""
 
-from dataclasses import dataclass, field
 from pydantic import JsonValue
+from dataclasses import dataclass, field
 
-from src.application.models import ChatMessage, ToolRecord
 from src.tools.teams.models import RosterPlayer
+from src.application.models import (
+    ChatMessage,
+    ToolRecord,
+)
 
 
 @dataclass(frozen=True)

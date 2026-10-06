@@ -4,11 +4,10 @@ The application and provider adapters share message dataclasses. Tool schemas
 are typed dictionaries in the format accepted directly by LiteLLM, without
 importing provider SDK types into the application."""
 
+from pydantic import JsonValue
 from dataclasses import dataclass
 from collections.abc import Callable
 from typing import Literal, TypedDict
-
-from pydantic import JsonValue
 
 from src.configuration.constants import MessageRole
 

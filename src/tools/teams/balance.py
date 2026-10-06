@@ -2,18 +2,22 @@
 
 The tool checks valid splits and minimizes the total rating gap.
 Successful results replace the saved teams. Invalid requests leave
-session state unchanged. No external services are called.
-"""
+session state unchanged. No external services are called."""
 
-from itertools import combinations
 from typing import TYPE_CHECKING
-
+from itertools import combinations
 from pydantic import JsonValue, ValidationError
 
 from src.application.models import ToolDefinition
-from src.application.errors import create_error_result, describe_validation_failure
 from src.configuration.constants import constants
-from src.tools.teams.models import BalanceInput, RosterPlayer
+from src.tools.teams.models import (
+    BalanceInput,
+    RosterPlayer,
+)
+from src.application.errors import (
+    create_error_result,
+    describe_validation_failure,
+)
 
 if TYPE_CHECKING:
     from src.application.session_db import ConversationSession
@@ -61,8 +65,11 @@ def balance_soccer_teams(
 
     players = session.roster
     if not constants.min_players <= len(players) <= constants.max_players:
-        return create_error_result(constants.errors.INVALID_INPUT,
-            "Teams require 3–22 players.", "Add or remove players and save the roster first.")
+        return create_error_result(
+            constants.errors.INVALID_INPUT,
+            "Teams require 3–22 players.",
+            "Add or remove players and save the roster first.",
+        )
 
     dedicated_goalkeepers = (
         session.dedicated_goalkeepers
@@ -70,11 +77,15 @@ def balance_soccer_teams(
         else settings.dedicated_goalkeepers
     )
 
-    if dedicated_goalkeepers and sum(
-        player.goalkeeper_willing for player in players
-    ) < 2:
-        return create_error_result(constants.errors.INVALID_INPUT,
-            "Dedicated goalkeepers require two willing players.", "Identify another keeper or disable dedicated goalkeepers.")
+    if (
+        dedicated_goalkeepers
+        and sum(player.goalkeeper_willing for player in players) < 2
+    ):
+        return create_error_result(
+            constants.errors.INVALID_INPUT,
+            "Dedicated goalkeepers require two willing players.",
+            "Identify another keeper or disable dedicated goalkeepers.",
+        )
 
     home_size = (len(players) + 1) // 2
     total_rating = sum(player.rating for player in players)
@@ -86,9 +97,7 @@ def balance_soccer_teams(
     for home_indices in combinations(range(len(players)), home_size):
         home_index_set = set(home_indices)
 
-        home = tuple(
-            players[index] for index in home_indices
-        )
+        home = tuple(players[index] for index in home_indices)
         away = tuple(
             player
             for index, player in enumerate(players)
@@ -113,7 +122,11 @@ def balance_soccer_teams(
             break
 
     if best_gap is None:
-        return create_error_result(constants.errors.INVALID_INPUT, "No valid team split was found.", "Check the roster and goalkeeper settings.")
+        return create_error_result(
+            constants.errors.INVALID_INPUT,
+            "No valid team split was found.",
+            "Check the roster and goalkeeper settings.",
+        )
 
     session.home = best_home
     session.away = best_away
